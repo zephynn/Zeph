@@ -28,6 +28,26 @@
   --font-body: "DM Sans", sans-serif;
 }
 
+/* Flipped automatically when the avatar's average brightness is low, so
+   text/glass stay legible against a dark or heavily saturated pfp. */
+body.dark-bg-text {
+  --fg: #f4f4f5;
+  --fg-muted: rgba(244, 244, 245, 0.75);
+
+  --glass-fill: linear-gradient(165deg, rgba(24, 24, 27, 0.55) 0%, rgba(24, 24, 27, 0.28) 100%);
+  --glass-fill-hover: linear-gradient(165deg, rgba(24, 24, 27, 0.68) 0%, rgba(24, 24, 27, 0.4) 100%);
+  --glass-border: rgba(255, 255, 255, 0.22);
+  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25),
+    inset 0 -10px 18px -14px rgba(255, 255, 255, 0.12);
+  --glass-shadow-hover: 0 14px 36px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3),
+    inset 0 -10px 18px -14px rgba(255, 255, 255, 0.16);
+}
+
+body.dark-bg-text .group {
+  background: linear-gradient(165deg, rgba(24, 24, 27, 0.3) 0%, rgba(24, 24, 27, 0.12) 100%);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -116,6 +136,34 @@ a {
   .blob {
     animation: none;
   }
+}
+
+/* --- PFP-derived background --- */
+/* Large, heavily blurred avatar behind everything, so the page's ambient
+   color follows whatever's in the avatar (a white/light avatar keeps this
+   fully light-mode; a saturated one tints the whole page). Crossfades in
+   once we have a real avatar, replacing the neutral placeholder blobs. */
+
+.bg-avatar {
+  position: fixed;
+  inset: -15%;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.2);
+  filter: blur(100px) saturate(160%);
+  opacity: 0;
+  transition: opacity 900ms ease;
+  pointer-events: none;
+}
+
+body.has-avatar-bg .bg-avatar {
+  opacity: 1;
+}
+
+body.has-avatar-bg .blobs {
+  opacity: 0;
+  transition: opacity 900ms ease;
 }
 
 /* --- Shared glass surface --- */
@@ -238,9 +286,11 @@ a {
 }
 
 .status-bubble {
-  flex: 1;
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: calc(100% - 110px);
   margin: 6px 0 0;
-  padding: 16px 18px;
+  padding: 12px 18px;
   border-radius: var(--radius-lg);
   font-size: 14px;
   line-height: 1.4;
@@ -410,5 +460,6 @@ a.row:focus-visible {
 
   .status-bubble {
     flex-basis: 100%;
+    max-width: 100%;
   }
 }

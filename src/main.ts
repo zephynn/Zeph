@@ -3,6 +3,7 @@ import { config } from "./config";
 import { LanyardClient, discordAvatarUrl, STATUS_LABEL, type LanyardData, type LanyardActivity } from "./lib/discord";
 import { watchYoutubeStats, formatCount } from "./lib/youtube";
 import { describeLocalTime } from "./lib/time";
+import { estimateLuminance } from "./lib/color";
 
 const yearEl = document.getElementById("year")!;
 yearEl.textContent = String(new Date().getFullYear());
@@ -21,6 +22,7 @@ handlesEl.textContent = `(${config.handles.map((h) => `@${h}`).join(" / ")})`;
 
 const avatarEl = document.getElementById("discord-avatar") as HTMLImageElement;
 const avatarPlaceholderEl = document.getElementById("avatar-placeholder")!;
+const bgAvatarEl = document.getElementById("bg-avatar")!;
 const statusDotEl = document.getElementById("status-dot")!;
 const statusBubbleEl = document.getElementById("status-bubble")!;
 
@@ -45,11 +47,25 @@ function describeActivity(activities: LanyardActivity[]): string {
   return "";
 }
 
+let lastBgAvatarUrl = "";
+
 function renderDiscord(data: LanyardData) {
   avatarEl.src = discordAvatarUrl(data.discord_user, 128);
   avatarEl.alt = data.discord_user.global_name || data.discord_user.username;
   avatarEl.hidden = false;
   avatarPlaceholderEl.hidden = true;
+
+  // Larger source for the background blur — blur washes out detail anyway,
+  // so a bigger fetch just avoids visible pixelation/banding once scaled up.
+  const bgUrl = discordAvatarUrl(data.discord_user, 512);
+  if (bgUrl !== lastBgAvatarUrl) {
+    lastBgAvatarUrl = bgUrl;
+    bgAvatarEl.style.backgroundImage = `url(${bgUrl})`;
+    document.body.classList.add("has-avatar-bg");
+    void estimateLuminance(bgUrl).then((luminance) => {
+      document.body.classList.toggle("dark-bg-text", luminance < 0.45);
+    });
+  }
 
   statusDotEl.dataset.status = data.discord_status;
   statusDotEl.setAttribute("aria-label", `Discord status: ${STATUS_LABEL[data.discord_status]}`);
