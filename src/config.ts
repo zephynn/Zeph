@@ -8,6 +8,9 @@ export const config = {
 
   discord: {
     userId: "1524022628744954017",
+    // Deep link, not a public profile page — opens the Discord app if
+    // installed, otherwise prompts logged-out visitors to sign in/open Discord.
+    url: "https://discord.com/users/1524022628744954017",
   },
 
   youtube: {
