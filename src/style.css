@@ -136,6 +136,28 @@ a {
   .blob {
     animation: none;
   }
+
+  .hero__top,
+  .handles,
+  .pill-row,
+  .group,
+  .footer,
+  .row {
+    animation: none;
+  }
+
+  .status-dot[data-status="online"]::after {
+    animation: none;
+    display: none;
+  }
+
+  .avatar {
+    transition: none;
+  }
+
+  a.row:active {
+    transform: none;
+  }
 }
 
 /* --- PFP-derived background --- */
@@ -241,9 +263,13 @@ body.has-avatar-bg .blobs {
 .avatar-wrap {
   position: relative;
   flex-shrink: 0;
+  width: 96px;
+  height: 96px;
 }
 
 .avatar {
+  position: absolute;
+  inset: 0;
   width: 96px;
   height: 96px;
   border-radius: 50%;
@@ -252,10 +278,13 @@ body.has-avatar-bg .blobs {
   border: 3px solid rgba(255, 255, 255, 0.85);
   box-shadow: var(--glass-shadow);
   display: block;
+  opacity: 1;
+  transition: opacity 450ms ease;
 }
 
-.avatar[hidden] {
-  display: none;
+.avatar.is-hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .avatar--placeholder {
@@ -291,6 +320,28 @@ body.has-avatar-bg .blobs {
 }
 .status-dot[data-status="offline"] {
   background: var(--status-offline);
+}
+
+.status-dot[data-status="online"]::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--status-online);
+  opacity: 0.6;
+  animation: pulse-ring 2200ms ease-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  70%,
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
 }
 
 .status-bubble {
@@ -427,6 +478,10 @@ a.row:focus-visible {
   box-shadow: var(--glass-shadow-hover);
 }
 
+a.row:active {
+  transform: scale(0.97);
+}
+
 .row:focus-visible {
   outline: 2px solid var(--fg-muted);
   outline-offset: 2px;
@@ -461,6 +516,57 @@ a.row:focus-visible {
   margin: 0;
   padding: 8px 16px;
   border-radius: 999px;
+}
+
+/* --- Entrance animation --- */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero__top,
+.handles,
+.pill-row,
+.group,
+.footer {
+  animation: fade-in-up 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hero__top {
+  animation-delay: 0ms;
+}
+.handles {
+  animation-delay: 70ms;
+}
+.pill-row {
+  animation-delay: 140ms;
+}
+.group {
+  animation-delay: 200ms;
+}
+.footer {
+  animation-delay: 460ms;
+}
+
+.row {
+  animation: fade-in-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.group__rows .row:nth-child(1) {
+  animation-delay: 260ms;
+}
+.group__rows .row:nth-child(2) {
+  animation-delay: 300ms;
+}
+.group__rows .row:nth-child(3) {
+  animation-delay: 340ms;
 }
 
 @media (min-width: 640px) {

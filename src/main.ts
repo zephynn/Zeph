@@ -4,6 +4,7 @@ import { LanyardClient, discordAvatarUrl, STATUS_LABEL, type LanyardData, type L
 import { watchYoutubeStats, formatCount } from "./lib/youtube";
 import { describeLocalTime } from "./lib/time";
 import { estimateLuminance } from "./lib/color";
+import { animateCount } from "./lib/animate";
 
 const yearEl = document.getElementById("year")!;
 yearEl.textContent = String(new Date().getFullYear());
@@ -90,8 +91,8 @@ let lastBgAvatarUrl = "";
 function renderDiscord(data: LanyardData) {
   avatarEl.src = discordAvatarUrl(data.discord_user, 128);
   avatarEl.alt = data.discord_user.global_name || data.discord_user.username;
-  avatarEl.hidden = false;
-  avatarPlaceholderEl.hidden = true;
+  avatarEl.classList.remove("is-hidden");
+  avatarPlaceholderEl.classList.add("is-hidden");
 
   // Larger source for the background blur — blur washes out detail anyway,
   // so a bigger fetch just avoids visible pixelation/banding once scaled up.
@@ -112,8 +113,8 @@ function renderDiscord(data: LanyardData) {
 }
 
 avatarEl.addEventListener("error", () => {
-  avatarEl.hidden = true;
-  avatarPlaceholderEl.hidden = false;
+  avatarEl.classList.add("is-hidden");
+  avatarPlaceholderEl.classList.remove("is-hidden");
 });
 
 const lanyard = new LanyardClient(config.discord.userId);
@@ -122,7 +123,11 @@ void lanyard.start();
 
 const followersCountEl = document.getElementById("followers-count")!;
 watchYoutubeStats((stats) => {
-  followersCountEl.textContent = stats.subscriberCount === null ? "Hidden" : formatCount(stats.subscriberCount);
+  if (stats.subscriberCount === null) {
+    followersCountEl.textContent = "Hidden";
+    return;
+  }
+  animateCount(followersCountEl, stats.subscriberCount, formatCount);
 });
 
 const localTimeEl = document.getElementById("local-time")!;
