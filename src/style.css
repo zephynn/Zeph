@@ -1,7 +1,7 @@
 :root {
   --bg: #f1f1f3;
   --fg: #18181b;
-  --fg-muted: #71717a;
+  --fg-muted: #3f3f46;
 
   --glass-fill: linear-gradient(165deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.22) 100%);
   --glass-fill-hover: linear-gradient(165deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.38) 100%);
@@ -32,7 +32,7 @@
    text/glass stay legible against a dark or heavily saturated pfp. */
 body.dark-bg-text {
   --fg: #f4f4f5;
-  --fg-muted: rgba(244, 244, 245, 0.75);
+  --fg-muted: rgba(244, 244, 245, 0.9);
 
   --glass-fill: linear-gradient(165deg, rgba(24, 24, 27, 0.55) 0%, rgba(24, 24, 27, 0.28) 100%);
   --glass-fill-hover: linear-gradient(165deg, rgba(24, 24, 27, 0.68) 0%, rgba(24, 24, 27, 0.4) 100%);
@@ -142,8 +142,7 @@ a {
   .pill-row,
   .now-playing,
   .group,
-  .view-counter,
-  .footer,
+  .bottom-row,
   .row {
     animation: none;
   }
@@ -623,20 +622,19 @@ a.row:active {
   text-align: center;
 }
 
-.view-counter {
+.bottom-row {
   margin-top: auto;
   padding-top: 40px;
   display: flex;
+  align-items: center;
   justify-content: center;
-}
-
-.footer {
-  margin-top: 16px;
-  display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .footer__pill {
+  display: inline-flex;
+  align-items: center;
   font-size: 12px;
   color: var(--fg-muted);
   margin: 0;
@@ -662,8 +660,7 @@ a.row:active {
 .pill-row,
 .now-playing,
 .group,
-.view-counter,
-.footer {
+.bottom-row {
   animation: fade-in-up 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -682,11 +679,8 @@ a.row:active {
 .now-playing {
   animation-delay: 380ms;
 }
-.view-counter {
+.bottom-row {
   animation-delay: 420ms;
-}
-.footer {
-  animation-delay: 460ms;
 }
 
 .row {
