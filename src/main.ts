@@ -19,7 +19,6 @@ handlesEl.textContent = `(${config.handles.map((h) => `@${h}`).join(" / ")})`;
 const avatarEl = document.getElementById("discord-avatar") as HTMLImageElement;
 const avatarPlaceholderEl = document.getElementById("avatar-placeholder")!;
 const statusDotEl = document.getElementById("status-dot")!;
-const statusTextEl = document.getElementById("discord-status-text")!;
 const statusBubbleEl = document.getElementById("status-bubble")!;
 
 const ACTIVITY_VERB: Record<number, string> = {
@@ -51,7 +50,6 @@ function renderDiscord(data: LanyardData) {
 
   statusDotEl.dataset.status = data.discord_status;
   statusDotEl.setAttribute("aria-label", `Discord status: ${STATUS_LABEL[data.discord_status]}`);
-  statusTextEl.textContent = STATUS_LABEL[data.discord_status];
 
   const activity = describeActivity(data.activities);
   statusBubbleEl.textContent = activity;
