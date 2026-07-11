@@ -7,10 +7,9 @@ export const config = {
   timezone: "Europe/London",
 
   discord: {
+    // Only used for the live Lanyard presence widget in the hero — the
+    // "Pages" links group no longer includes a Discord row.
     userId: "1524022628744954017",
-    // Deep link, not a public profile page — opens the Discord app if
-    // installed, otherwise prompts logged-out visitors to sign in/open Discord.
-    url: "https://discord.com/users/1524022628744954017",
   },
 
   youtube: {
@@ -23,5 +22,7 @@ export const config = {
     url: "https://www.roblox.com/users/0/profile",
   },
 
-  discordInvite: "",
+  tiktok: {
+    url: "https://www.tiktok.com/@zeph.dev",
+  },
 } as const;

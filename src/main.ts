@@ -16,8 +16,8 @@ robloxLink.href = config.roblox.url;
 const youtubeLink = document.getElementById("card-youtube") as HTMLAnchorElement;
 youtubeLink.href = config.youtube.url;
 
-const discordLink = document.getElementById("card-discord") as HTMLAnchorElement;
-discordLink.href = config.discord.url;
+const tiktokLink = document.getElementById("card-tiktok") as HTMLAnchorElement;
+tiktokLink.href = config.tiktok.url;
 
 const handlesEl = document.getElementById("handles")!;
 handlesEl.textContent = `(${config.handles.map((h) => `@${h}`).join(" / ")})`;
