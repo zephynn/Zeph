@@ -1,7 +1,7 @@
 :root {
   --bg: #f1f1f3;
   --fg: #18181b;
-  --fg-muted: #3f3f46;
+  --fg-muted: #18181b;
 
   --glass-fill: linear-gradient(165deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.22) 100%);
   --glass-fill-hover: linear-gradient(165deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.38) 100%);
@@ -32,7 +32,7 @@
    text/glass stay legible against a dark or heavily saturated pfp. */
 body.dark-bg-text {
   --fg: #f4f4f5;
-  --fg-muted: rgba(244, 244, 245, 0.9);
+  --fg-muted: #f4f4f5;
 
   --glass-fill: linear-gradient(165deg, rgba(24, 24, 27, 0.55) 0%, rgba(24, 24, 27, 0.28) 100%);
   --glass-fill-hover: linear-gradient(165deg, rgba(24, 24, 27, 0.68) 0%, rgba(24, 24, 27, 0.4) 100%);
@@ -635,6 +635,7 @@ a.row:active {
 .footer__pill {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   font-size: 12px;
   color: var(--fg-muted);
   margin: 0;
