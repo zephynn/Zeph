@@ -208,7 +208,7 @@ body.has-avatar-bg .blobs {
   z-index: 1;
   max-width: 480px;
   margin: 0 auto;
-  padding: 64px 24px 40px;
+  padding: 92px 24px 40px;
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
@@ -228,6 +228,14 @@ body.has-avatar-bg .blobs {
   gap: 14px;
   width: 100%;
   margin-bottom: 6px;
+}
+
+.hero__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
 }
 
 .avatar-wrap {
@@ -286,18 +294,26 @@ body.has-avatar-bg .blobs {
 }
 
 .status-bubble {
-  flex: 0 1 auto;
   width: fit-content;
-  max-width: calc(100% - 110px);
-  margin: 6px 0 0;
+  max-width: 100%;
+  margin: 0;
   padding: 12px 18px;
-  border-radius: var(--radius-lg);
+  /* Small top-left radius reads as a speech-bubble tail pointing at the avatar. */
+  border-radius: 8px var(--radius-lg) var(--radius-lg) var(--radius-lg);
   font-size: 14px;
   line-height: 1.4;
 }
 
 .status-bubble[hidden] {
   display: none;
+}
+
+.status-emoji {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  vertical-align: -4px;
+  margin-right: 4px;
 }
 
 .name {
@@ -449,7 +465,7 @@ a.row:focus-visible {
 
 @media (min-width: 640px) {
   .content {
-    padding-top: 96px;
+    padding-top: 128px;
   }
 }
 
@@ -458,8 +474,7 @@ a.row:focus-visible {
     flex-wrap: wrap;
   }
 
-  .status-bubble {
+  .hero__identity {
     flex-basis: 100%;
-    max-width: 100%;
   }
 }

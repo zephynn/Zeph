@@ -11,6 +11,14 @@ export interface LanyardActivity {
     small_image?: string;
     small_text?: string;
   };
+  // Only present on custom statuses (type 4). A unicode emoji comes through
+  // as `name` with no `id`; a custom server emoji has an `id` and is only
+  // renderable as an image (Discord doesn't send the actual glyph for those).
+  emoji?: {
+    name: string;
+    id?: string;
+    animated?: boolean;
+  };
 }
 
 export interface LanyardData {

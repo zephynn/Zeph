@@ -34,17 +34,55 @@ const ACTIVITY_VERB: Record<number, string> = {
   5: "Competing in",
 };
 
-function describeActivity(activities: LanyardActivity[]): string {
+interface ActivityContent {
+  emojiUrl?: string;
+  emojiUnicode?: string;
+  text: string;
+}
+
+function getActivityContent(activities: LanyardActivity[]): ActivityContent | null {
   const custom = activities.find((a) => a.type === 4);
-  if (custom?.state) return custom.state;
+  if (custom?.state || custom?.emoji) {
+    const emoji = custom.emoji;
+    return {
+      emojiUrl: emoji?.id ? `https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? "gif" : "png"}` : undefined,
+      emojiUnicode: emoji && !emoji.id ? emoji.name : undefined,
+      text: custom.state ?? "",
+    };
+  }
 
   const other = activities.find((a) => a.type !== 4);
   if (other) {
     const verb = ACTIVITY_VERB[other.type] ?? "";
-    return [verb, other.name].filter(Boolean).join(" ");
+    return { text: [verb, other.name].filter(Boolean).join(" ") };
   }
 
-  return "";
+  return null;
+}
+
+function renderStatusBubble(content: ActivityContent | null) {
+  statusBubbleEl.replaceChildren();
+
+  if (!content) {
+    statusBubbleEl.hidden = true;
+    return;
+  }
+
+  if (content.emojiUrl) {
+    const img = document.createElement("img");
+    img.src = content.emojiUrl;
+    img.alt = "";
+    img.className = "status-emoji";
+    statusBubbleEl.appendChild(img);
+  } else if (content.emojiUnicode) {
+    statusBubbleEl.appendChild(document.createTextNode(`${content.emojiUnicode} `));
+  }
+
+  if (content.text) {
+    statusBubbleEl.appendChild(document.createTextNode(content.text));
+  }
+
+  statusBubbleEl.hidden = !content.text && !content.emojiUrl && !content.emojiUnicode;
 }
 
 let lastBgAvatarUrl = "";
@@ -70,9 +108,7 @@ function renderDiscord(data: LanyardData) {
   statusDotEl.dataset.status = data.discord_status;
   statusDotEl.setAttribute("aria-label", `Discord status: ${STATUS_LABEL[data.discord_status]}`);
 
-  const activity = describeActivity(data.activities);
-  statusBubbleEl.textContent = activity;
-  statusBubbleEl.hidden = activity === "";
+  renderStatusBubble(getActivityContent(data.activities));
 }
 
 avatarEl.addEventListener("error", () => {
