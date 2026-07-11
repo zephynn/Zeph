@@ -141,6 +141,7 @@ a {
   .handles,
   .pill-row,
   .group,
+  .view-counter,
   .footer,
   .row {
     animation: none;
@@ -399,6 +400,10 @@ body.has-avatar-bg .blobs {
   white-space: nowrap;
 }
 
+.pill[hidden] {
+  display: none;
+}
+
 .pill__icon {
   width: 15px;
   height: 15px;
@@ -503,9 +508,15 @@ a.row:active {
   text-align: center;
 }
 
-.footer {
+.view-counter {
   margin-top: auto;
   padding-top: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+.footer {
+  margin-top: 16px;
   display: flex;
   justify-content: center;
 }
@@ -535,6 +546,7 @@ a.row:active {
 .handles,
 .pill-row,
 .group,
+.view-counter,
 .footer {
   animation: fade-in-up 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -550,6 +562,9 @@ a.row:active {
 }
 .group {
   animation-delay: 200ms;
+}
+.view-counter {
+  animation-delay: 420ms;
 }
 .footer {
   animation-delay: 460ms;

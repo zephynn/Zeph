@@ -5,6 +5,7 @@ import { watchYoutubeStats, formatCount } from "./lib/youtube";
 import { describeLocalTime } from "./lib/time";
 import { estimateLuminance } from "./lib/color";
 import { animateCount } from "./lib/animate";
+import { fetchViewCount } from "./lib/views";
 
 const yearEl = document.getElementById("year")!;
 yearEl.textContent = String(new Date().getFullYear());
@@ -141,3 +142,11 @@ function renderLocalTime() {
 
 renderLocalTime();
 window.setInterval(renderLocalTime, 30_000);
+
+const viewsPillEl = document.getElementById("views-pill")!;
+const viewsCountEl = document.getElementById("views-count")!;
+void fetchViewCount().then((count) => {
+  if (count === null) return;
+  viewsPillEl.hidden = false;
+  animateCount(viewsCountEl, count, (n) => n.toLocaleString());
+});
