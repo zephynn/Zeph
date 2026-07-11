@@ -676,11 +676,11 @@ a.row:active {
 .pill-row {
   animation-delay: 140ms;
 }
-.now-playing {
-  animation-delay: 170ms;
-}
 .group {
   animation-delay: 200ms;
+}
+.now-playing {
+  animation-delay: 380ms;
 }
 .view-counter {
   animation-delay: 420ms;
