@@ -6,6 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="zephyn — project details." />
     <title>Project — zephyn</title>
+
+    <!-- Generic, not per-project: this one static file serves every /project/:slug
+         via the Vercel rewrite, and project.ts sets the real title/content client-side,
+         which crawlers generating link previews don't execute. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="zephyn" />
+    <meta property="og:title" content="Project — zephyn" />
+    <meta property="og:description" content="A project by zephyn, a Roblox developer." />
+    <meta property="og:image" content="https://www.zephyn.dev/og-image.png" />
+    <meta property="og:image:width" content="2400" />
+    <meta property="og:image:height" content="1260" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Project — zephyn" />
+    <meta name="twitter:description" content="A project by zephyn, a Roblox developer." />
+    <meta name="twitter:image" content="https://www.zephyn.dev/og-image.png" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
