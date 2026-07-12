@@ -711,8 +711,11 @@ a.row:active {
 .pill-row {
   animation-delay: 140ms;
 }
-.group {
+.groups > .group:nth-child(1) {
   animation-delay: 200ms;
+}
+.groups > .group:nth-child(2) {
+  animation-delay: 260ms;
 }
 .bottom-row {
   animation-delay: 380ms;
