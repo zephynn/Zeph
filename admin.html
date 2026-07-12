@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Review admin — zephyn</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="page">
+      <div class="blobs" aria-hidden="true">
+        <div class="blob blob--a"></div>
+        <div class="blob blob--b"></div>
+        <div class="blob blob--c"></div>
+      </div>
+
+      <main class="content">
+        <header class="page-header">
+          <h1 class="page-title">Review admin</h1>
+        </header>
+
+        <form id="unlock-form" class="review-form admin-unlock">
+          <label class="review-form__field">
+            <span>Admin password</span>
+            <input type="password" name="password" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="review-form__submit">Unlock</button>
+          <p class="review-form__status" id="unlock-status" role="status"></p>
+        </form>
+
+        <div id="admin-root" class="admin-root" hidden></div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/admin.ts"></script>
+  </body>
+</html>

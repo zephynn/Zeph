@@ -12,6 +12,9 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, "index.html"),
         portfolio: resolve(__dirname, "portfolio.html"),
+        project: resolve(__dirname, "project.html"),
+        reviews: resolve(__dirname, "reviews.html"),
+        admin: resolve(__dirname, "admin.html"),
       },
     },
   },

@@ -17,11 +17,7 @@ const placeholderThumbIcon = `
 for (const project of config.portfolio) {
   const card = document.createElement("a");
   card.className = "portfolio-card";
-  card.href = project.url;
-  if (project.url !== "#") {
-    card.target = "_blank";
-    card.rel = "noopener noreferrer";
-  }
+  card.href = `/project/${project.slug}`;
 
   const thumb = document.createElement("div");
   thumb.className = "portfolio-card__thumb";
