@@ -6,7 +6,6 @@ import { describeLocalTime } from "./lib/time";
 import { estimateLuminance } from "./lib/color";
 import { animateCount } from "./lib/animate";
 import { fetchViewCount } from "./lib/views";
-import { watchNowPlaying } from "./lib/spotify";
 
 const yearEl = document.getElementById("year")!;
 yearEl.textContent = String(new Date().getFullYear());
@@ -150,21 +149,4 @@ void fetchViewCount().then((count) => {
   if (count === null) return;
   viewsPillEl.hidden = false;
   animateCount(viewsCountEl, count, (n) => n.toLocaleString());
-});
-
-const nowPlayingEl = document.getElementById("now-playing") as HTMLAnchorElement;
-const nowPlayingArtEl = document.getElementById("now-playing-art") as HTMLImageElement;
-const nowPlayingTitleEl = document.getElementById("now-playing-title")!;
-const nowPlayingArtistEl = document.getElementById("now-playing-artist")!;
-
-watchNowPlaying((data) => {
-  if (!data.isPlaying) {
-    nowPlayingEl.hidden = true;
-    return;
-  }
-  nowPlayingEl.href = data.url ?? "#";
-  nowPlayingArtEl.src = data.albumArt ?? "";
-  nowPlayingTitleEl.textContent = data.title ?? "";
-  nowPlayingArtistEl.textContent = data.artist ?? "";
-  nowPlayingEl.hidden = false;
 });
