@@ -1,8 +1,8 @@
 # zephyn — link-in-bio portfolio
 
 Frosted-glass link-in-bio site with live Discord presence, a live YouTube
-subscriber count, a view counter, a portfolio with per-project detail pages,
-and a moderated client review system.
+subscriber count, a view counter, an admin-editable portfolio with
+per-project detail pages, and a moderated client review system.
 
 ## Stack
 
@@ -15,42 +15,49 @@ and a moderated client review system.
 - `api/views.ts` — increments a view counter, backed by Redis
 - `api/reviews/*` — review submission (public, rate-limited + honeypot),
   public listing (approved only), and password-gated admin endpoints
-- Upstash Redis (via Vercel's Marketplace integration) for the view counter
-  and reviews (a hash: review id → JSON)
+- `api/portfolio/*` — public project listing, password-gated create/edit/delete
+- Upstash Redis (via Vercel's Marketplace integration) for the view counter,
+  reviews (a hash: review id → JSON), and portfolio projects (a hash: slug → JSON)
 
 Each `api/*.ts` function is deliberately self-contained (no shared local
 imports between them) — only npm packages, even where that means a little
-duplication (e.g. the Redis connection setup, or Spotify-style token
-helpers). An earlier version shared logic via `api/_lib/`, but Vercel's Node
-runtime failed to resolve those relative imports at runtime
-(`ERR_MODULE_NOT_FOUND`), taking down every function that imported from it —
-so the duplication here is intentional, not an oversight.
+duplication (e.g. the Redis connection setup, or the admin password check).
+An earlier version shared logic via `api/_lib/`, but Vercel's Node runtime
+failed to resolve those relative imports at runtime (`ERR_MODULE_NOT_FOUND`),
+taking down every function that imported from it — so the duplication here
+is intentional, not an oversight.
 
 ## Project structure
 
 ```
-api/youtube.ts               YouTube subscriber count proxy
-api/views.ts                  View counter (Redis-backed)
-api/reviews/submit.ts          Public: submit a review (honeypot + per-IP rate limit)
-api/reviews/list.ts             Public: list approved reviews, optional ?projectId=
-api/reviews/admin-data.ts        Password-gated: list every review (pending + approved)
-api/reviews/moderate.ts           Password-gated: approve or reject a review
+api/youtube.ts                 YouTube subscriber count proxy
+api/views.ts                    View counter (Redis-backed)
+api/reviews/submit.ts            Public: submit a review (honeypot + per-IP rate limit)
+api/reviews/list.ts               Public: list approved reviews, optional ?projectId=
+api/reviews/admin-data.ts          Password-gated: every review + read-only view count
+api/reviews/moderate.ts              Password-gated: approve or reject a review
+api/portfolio/list.ts                 Public: list projects (falls back to 3 placeholders
+                                       until you save a real one via /admin)
+api/portfolio/save.ts                  Password-gated: create or update a project (by slug)
+api/portfolio/delete.ts                 Password-gated: delete a project
 
-src/config.ts                  Discord ID, YouTube channel ID, social links, portfolio — edit this
+src/config.ts                  Discord ID, YouTube channel ID, social links — edit this
 src/lib/discord.ts               Lanyard WebSocket client
 src/lib/youtube.ts                 Client-side polling wrapper around /api/youtube
 src/lib/views.ts                     Client-side fetch wrapper around /api/views
 src/lib/reviews.ts                    Client-side fetch/submit wrappers around /api/reviews/*
-src/lib/color.ts                        Avatar luminance sampling (light/dark text auto-switch)
-src/lib/time.ts                           Local-time pill math
-src/lib/animate.ts                          Count-up number animation
+src/lib/portfolio.ts                   Client-side fetch wrapper around /api/portfolio/list
+src/lib/color.ts                         Avatar luminance sampling (light/dark text auto-switch)
+src/lib/time.ts                            Local-time pill math
+src/lib/animate.ts                           Count-up number animation
 
 src/main.ts        + index.html        Main link-in-bio page
 src/portfolio.ts   + portfolio.html     Portfolio grid, cards link to /project/<slug>
 src/project.ts     + project.html       Project detail + its reviews + submit form
 src/reviews.ts     + reviews.html       Global feed of all approved reviews
-src/admin.ts       + admin.html         Password-gated review moderation queue (not linked
-                                        anywhere in the site nav — you just know the URL)
+src/admin.ts       + admin.html         Password-gated: moderate reviews, manage portfolio
+                                        projects, stats + CSV export. Not linked anywhere in
+                                        the site nav — you just know the URL (/admin).
 src/style.css                          Shared glassmorphism styling for all 6 pages
 ```
 
@@ -58,10 +65,6 @@ src/style.css                          Shared glassmorphism styling for all 6 pa
 
 1. Edit `src/config.ts`:
    - `roblox.url` — currently a placeholder, set it to your real profile URL
-   - `portfolio` — an array of `{ slug, title, description, detail, image, url }`.
-     `slug` must be unique (used in the URL and to tag reviews to a project).
-     Ships with 3 placeholder entries; `image` can stay `""` (shows a
-     placeholder icon) or point at a file you drop in `/public`.
 2. Copy `.env.example` to `.env` and fill in the values (YouTube API key,
    Redis, `REVIEWS_ADMIN_PASSWORD`).
 3. Install dependencies:
@@ -69,6 +72,8 @@ src/style.css                          Shared glassmorphism styling for all 6 pa
    ```bash
    npm install
    ```
+4. Once deployed, go to `/admin`, log in, and add your real projects under
+   "Portfolio" — no code edit or redeploy needed for that part anymore.
 
 ## Local development
 
@@ -99,7 +104,7 @@ Lanyard's presence data is fetched directly from the browser
 3. Add the Upstash integration from Vercel's Marketplace (Storage tab) —
    pick **Redis**, not QStash/Vector/Kafka if those show up too.
 4. Set the env vars from `.env.example` in the Vercel project.
-5. Deploy.
+5. Deploy, then go fill in your real portfolio projects at `/admin`.
 
 ## Reviews: abuse resistance and moderation
 
@@ -116,6 +121,25 @@ gate suitable for a single-admin personal site — there's no lockout or
 rate-limit on wrong password attempts, so pick a real password, not something
 guessable.
 
+## The admin page (`/admin`)
+
+Not linked anywhere in the site's visible nav — reach it by typing the URL.
+Behind the same password gate as reviews:
+
+- **Stats bar**: total/pending/approved review counts, average rating, total
+  site views (a read-only Redis peek — it never calls the same `incr()` the
+  public view counter uses, so loading admin doesn't inflate your own count),
+  and a playful "vibe check" line that reacts to your average rating.
+- **Portfolio management**: add, edit, or delete projects — this is now the
+  only way to manage portfolio content; `src/config.ts` no longer holds it.
+  A project's `slug` is locked once saved (it's the review-tagging key and
+  the URL segment), so only new projects get to pick one.
+- **CSV export**: downloads every review (any status) as a `.csv`, client-side,
+  no extra request.
+- **A couple of just-for-fun touches**: a confetti burst when you approve a
+  review, and clicking the page title 5 times fast triggers a small joke.
+  Both respect `prefers-reduced-motion`.
+
 ## Notes on the sandbox / dev-container testing
 
 This project was built in a sandboxed cloud dev environment whose outbound
@@ -125,8 +149,9 @@ APIs, Upstash) are blocked there with a proxy-level 403, before the request
 ever reaches the real service. That's an environment restriction, not a bug
 in the fetch code. Live behavior should be verified after deploying to
 Vercel (or running locally outside a restricted sandbox), where outbound
-requests aren't constrained the same way. The review system's API logic and
-the client-side rendering (including the XSS-safety of user-submitted
-review text) were verified locally with mocked API responses; the real
-Redis-backed flow and the `/project/:slug` clean-URL rewrite need checking
-on an actual Vercel deployment.
+requests aren't constrained the same way. The review and portfolio API
+logic, the client-side rendering (including the XSS-safety of user-submitted
+review text), and the full admin flow (stats, CSV export, confetti, the
+portfolio add/edit/delete cycle) were all verified locally with mocked API
+responses; the real Redis-backed flow and the `/project/:slug` clean-URL
+rewrite need checking on an actual Vercel deployment.

@@ -1,5 +1,5 @@
 import "./style.css";
-import { config } from "./config";
+import { fetchPortfolio } from "./lib/portfolio";
 import { fetchReviews, submitReview } from "./lib/reviews";
 
 const yearEl = document.getElementById("year")!;
@@ -8,7 +8,6 @@ yearEl.textContent = String(new Date().getFullYear());
 const rootEl = document.getElementById("project-root")!;
 
 const slug = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop() ?? "");
-const project = config.portfolio.find((p) => p.slug === slug);
 
 function renderStars(rating: number): string {
   return "★".repeat(rating) + "☆".repeat(5 - rating);
@@ -18,11 +17,16 @@ function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-if (!project) {
-  rootEl.innerHTML = `
-    <p class="project-not-found">Couldn't find that project.</p>
-  `;
-} else {
+void fetchPortfolio().then((projects) => {
+  const project = projects.find((p) => p.slug === slug);
+
+  if (!project) {
+    rootEl.innerHTML = `<p class="project-not-found">Couldn't find that project.</p>`;
+    return;
+  }
+
+  // project.* comes from the password-gated admin (api/portfolio/save.ts), not
+  // visitor input, so innerHTML here is safe — unlike review name/comment below.
   document.title = `${project.title} — zephyn`;
 
   const thumbHtml = project.image
@@ -165,4 +169,4 @@ if (!project) {
       }
     });
   });
-}
+});

@@ -23,7 +23,7 @@
 
       <main class="content">
         <header class="page-header">
-          <h1 class="page-title">Review admin</h1>
+          <h1 class="page-title" id="admin-title">Review admin</h1>
         </header>
 
         <form id="unlock-form" class="review-form admin-unlock">
@@ -35,7 +35,58 @@
           <p class="review-form__status" id="unlock-status" role="status"></p>
         </form>
 
-        <div id="admin-root" class="admin-root" hidden></div>
+        <div id="admin-root" class="admin-root" hidden>
+          <div id="admin-stats" class="admin-stats"></div>
+
+          <section id="admin-reviews-section"></section>
+
+          <button type="button" id="export-csv" class="review-form__submit admin-export-btn">Export reviews as CSV</button>
+
+          <section class="admin-portfolio">
+            <h2 class="reviews-heading">Portfolio</h2>
+            <div id="portfolio-admin-list" class="portfolio-admin-list"></div>
+
+            <form id="portfolio-form" class="review-form">
+              <p class="review-form__status" id="portfolio-form-mode">Add a new project</p>
+
+              <label class="review-form__field">
+                <span>Slug (URL-safe, lowercase, can't be changed after saving)</span>
+                <input type="text" name="slug" pattern="[a-z0-9-]+" required />
+              </label>
+
+              <label class="review-form__field">
+                <span>Title</span>
+                <input type="text" name="title" maxlength="80" required />
+              </label>
+
+              <label class="review-form__field">
+                <span>Short description (shown on the grid card)</span>
+                <input type="text" name="description" maxlength="200" />
+              </label>
+
+              <label class="review-form__field">
+                <span>Full detail (shown on the project page — blank line = new paragraph)</span>
+                <textarea name="detail" rows="5" maxlength="4000"></textarea>
+              </label>
+
+              <label class="review-form__field">
+                <span>Image URL (optional — leave blank for a placeholder)</span>
+                <input type="text" name="image" />
+              </label>
+
+              <label class="review-form__field">
+                <span>External link (optional — e.g. the actual Roblox game)</span>
+                <input type="text" name="url" />
+              </label>
+
+              <div class="admin-review__actions">
+                <button type="submit" class="review-form__submit" id="portfolio-form-submit">Save project</button>
+                <button type="button" class="admin-review__reject" id="portfolio-form-cancel" hidden>Cancel edit</button>
+              </div>
+              <p class="review-form__status" id="portfolio-form-status" role="status"></p>
+            </form>
+          </section>
+        </div>
       </main>
     </div>
 

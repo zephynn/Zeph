@@ -53,8 +53,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .filter((review): review is Review => review !== null)
       .sort((a, b) => b.createdAt - a.createdAt);
 
+    // Read-only peek at the view count — must never use incr() here, that's
+    // the public /api/views.ts endpoint's job. Reading it must not inflate it.
+    const totalViews = (await redis.get<number>("views")) ?? 0;
+
     res.setHeader("Cache-Control", "no-store");
-    res.status(200).json({ reviews });
+    res.status(200).json({ reviews, totalViews });
   } catch {
     res.status(500).json({ error: "Could not load reviews" });
   }

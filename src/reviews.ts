@@ -1,5 +1,5 @@
 import "./style.css";
-import { config } from "./config";
+import { fetchPortfolio } from "./lib/portfolio";
 import { fetchReviews } from "./lib/reviews";
 
 const yearEl = document.getElementById("year")!;
@@ -15,7 +15,7 @@ function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-void fetchReviews().then((reviews) => {
+void Promise.all([fetchReviews(), fetchPortfolio()]).then(([reviews, projects]) => {
   feedEl.replaceChildren();
 
   if (reviews.length === 0) {
@@ -27,7 +27,7 @@ void fetchReviews().then((reviews) => {
   }
 
   for (const review of reviews) {
-    const project = config.portfolio.find((p) => p.slug === review.projectId);
+    const project = projects.find((p) => p.slug === review.projectId);
 
     const card = document.createElement(project ? "a" : "div");
     card.className = "review-card review-card--feed";

@@ -1,5 +1,5 @@
 import "./style.css";
-import { config } from "./config";
+import { fetchPortfolio } from "./lib/portfolio";
 
 const yearEl = document.getElementById("year")!;
 yearEl.textContent = String(new Date().getFullYear());
@@ -14,32 +14,34 @@ const placeholderThumbIcon = `
   </svg>
 `;
 
-for (const project of config.portfolio) {
-  const card = document.createElement("a");
-  card.className = "portfolio-card";
-  card.href = `/project/${project.slug}`;
+void fetchPortfolio().then((projects) => {
+  for (const project of projects) {
+    const card = document.createElement("a");
+    card.className = "portfolio-card";
+    card.href = `/project/${project.slug}`;
 
-  const thumb = document.createElement("div");
-  thumb.className = "portfolio-card__thumb";
-  if (project.image) {
-    thumb.style.backgroundImage = `url(${project.image})`;
-  } else {
-    thumb.classList.add("portfolio-card__thumb--placeholder");
-    thumb.innerHTML = placeholderThumbIcon;
+    const thumb = document.createElement("div");
+    thumb.className = "portfolio-card__thumb";
+    if (project.image) {
+      thumb.style.backgroundImage = `url(${project.image})`;
+    } else {
+      thumb.classList.add("portfolio-card__thumb--placeholder");
+      thumb.innerHTML = placeholderThumbIcon;
+    }
+
+    const title = document.createElement("span");
+    title.className = "portfolio-card__title";
+    title.textContent = project.title;
+
+    const description = document.createElement("p");
+    description.className = "portfolio-card__description";
+    description.textContent = project.description;
+
+    const body = document.createElement("div");
+    body.className = "portfolio-card__body";
+    body.append(title, description);
+
+    card.append(thumb, body);
+    gridEl.appendChild(card);
   }
-
-  const title = document.createElement("span");
-  title.className = "portfolio-card__title";
-  title.textContent = project.title;
-
-  const description = document.createElement("p");
-  description.className = "portfolio-card__description";
-  description.textContent = project.description;
-
-  const body = document.createElement("div");
-  body.className = "portfolio-card__body";
-  body.append(title, description);
-
-  card.append(thumb, body);
-  gridEl.appendChild(card);
-}
+});

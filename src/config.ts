@@ -26,36 +26,7 @@ export const config = {
     url: "https://www.tiktok.com/@zeph.dev",
   },
 
-  // TODO: replace with your real projects. `slug` must be unique — it's used
-  // in the URL (/project/<slug>) and to tag reviews to a specific project.
-  // `image` can stay "" (shows a placeholder) or point at a file dropped in
-  // /public (e.g. "/my-project.png"). `url` is an optional external link
-  // (e.g. the actual Roblox game) shown as a button on the detail page —
-  // leave it "#" to omit.
-  portfolio: [
-    {
-      slug: "project-one",
-      title: "Project One",
-      description: "Add a short description of this project here.",
-      detail: "Add a longer write-up of this project here — what it is, what you built, what you're proud of. Separate paragraphs with a blank line.",
-      image: "",
-      url: "#",
-    },
-    {
-      slug: "project-two",
-      title: "Project Two",
-      description: "Add a short description of this project here.",
-      detail: "Add a longer write-up of this project here — what it is, what you built, what you're proud of. Separate paragraphs with a blank line.",
-      image: "",
-      url: "#",
-    },
-    {
-      slug: "project-three",
-      title: "Project Three",
-      description: "Add a short description of this project here.",
-      detail: "Add a longer write-up of this project here — what it is, what you built, what you're proud of. Separate paragraphs with a blank line.",
-      image: "",
-      url: "#",
-    },
-  ],
+  // Portfolio projects now live in Redis, editable at /admin — see
+  // api/portfolio/*.ts and src/lib/portfolio.ts. api/portfolio/list.ts has
+  // the placeholder defaults shown until you save your first real project.
 } as const;

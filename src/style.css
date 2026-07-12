@@ -148,7 +148,8 @@ a {
   .portfolio-card,
   .project-detail,
   .reviews-section,
-  .reviews-list--feed {
+  .reviews-list--feed,
+  .admin-title--shake {
     animation: none;
   }
 
@@ -1037,6 +1038,110 @@ a.review-card--feed:focus-visible {
   font-size: 12px;
   font-weight: 600;
   color: var(--status-online);
+}
+
+.admin-title--shake {
+  animation: admin-title-shake 400ms ease;
+}
+
+@keyframes admin-title-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px) rotate(-1deg);
+  }
+  40% {
+    transform: translateX(6px) rotate(1deg);
+  }
+  60% {
+    transform: translateX(-4px) rotate(-0.5deg);
+  }
+  80% {
+    transform: translateX(4px) rotate(0.5deg);
+  }
+}
+
+.admin-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+  margin-top: 32px;
+  margin-bottom: 24px;
+}
+
+.admin-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.admin-stat__value {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.admin-stat__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted);
+}
+
+.admin-vibe {
+  width: 100%;
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-export-btn {
+  margin-top: 20px;
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--glass-border);
+}
+
+.admin-portfolio {
+  width: 100%;
+  margin-top: 40px;
+}
+
+.portfolio-admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.confetti-piece {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 1000;
+  animation: confetti-burst 900ms ease-out forwards;
+}
+
+@keyframes confetti-burst {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+    opacity: 0;
+  }
 }
 
 /* --- Entrance animation --- */
