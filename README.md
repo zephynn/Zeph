@@ -24,22 +24,28 @@ duplication is intentional here, not an oversight.
 ```
 api/youtube.ts        YouTube subscriber count proxy
 api/views.ts           View counter (Redis-backed)
-src/config.ts           Discord ID, YouTube channel ID, Roblox/TikTok links — edit this
+src/config.ts           Discord ID, YouTube channel ID, Roblox/TikTok/portfolio links — edit this
 src/lib/discord.ts       Lanyard WebSocket client
 src/lib/youtube.ts        Client-side polling wrapper around /api/youtube
 src/lib/views.ts           Client-side fetch wrapper around /api/views
 src/lib/color.ts            Avatar luminance sampling (light/dark text auto-switch)
 src/lib/time.ts               Local-time pill math
 src/lib/animate.ts             Count-up number animation
-src/main.ts                     Wires all of the above into the DOM
-src/style.css                    Glassmorphism styling (light theme, PFP-derived background)
-index.html                         Markup
+src/main.ts                     Wires all of the above into the DOM (index.html)
+src/portfolio.ts                  Renders the portfolio grid from config.ts (portfolio.html)
+src/style.css                      Glassmorphism styling (light theme, PFP-derived background)
+index.html                           Main page markup
+portfolio.html                        Portfolio page markup — a real separate page, not a
+                                        section, built as a second Vite entry (see vite.config.ts)
 ```
 
 ## Setup
 
 1. Edit `src/config.ts`:
    - `roblox.url` — currently a placeholder, set it to your real profile URL
+   - `portfolio` — an array of `{ title, description, image, url }`. Ships with
+     3 placeholder entries; `image` can stay `""` (shows a placeholder icon) or
+     point at a file you drop in `/public` (e.g. `"/my-project.png"`).
 2. Copy `.env.example` to `.env` and fill in the values (YouTube API key, Redis).
 3. Install dependencies:
 

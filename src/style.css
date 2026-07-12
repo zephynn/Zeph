@@ -142,7 +142,10 @@ a {
   .pill-row,
   .group,
   .bottom-row,
-  .row {
+  .row,
+  .page-header,
+  .portfolio-grid,
+  .portfolio-card {
     animation: none;
   }
 
@@ -155,7 +158,9 @@ a {
     transition: none;
   }
 
-  a.row:active {
+  a.row:active,
+  .back-link:active,
+  .portfolio-card:active {
     transform: none;
   }
 }
@@ -193,6 +198,8 @@ body.has-avatar-bg .blobs {
 .pill,
 .status-bubble,
 .row,
+.back-link,
+.portfolio-card,
 .footer__pill {
   position: relative;
   overflow: hidden;
@@ -206,6 +213,8 @@ body.has-avatar-bg .blobs {
 .pill::before,
 .status-bubble::before,
 .row::before,
+.back-link::before,
+.portfolio-card::before,
 .footer__pill::before {
   content: "";
   position: absolute;
@@ -528,6 +537,148 @@ a.row:active {
   border-radius: 999px;
 }
 
+/* --- Portfolio page --- */
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  background: var(--glass-fill-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--glass-shadow-hover);
+}
+
+.back-link:active {
+  transform: scale(0.97);
+}
+
+.back-link:focus-visible {
+  outline: 2px solid var(--fg-muted);
+  outline-offset: 2px;
+}
+
+.back-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.page-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 28px;
+  margin: 0;
+}
+
+.portfolio-grid {
+  width: 100%;
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.portfolio-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  animation: fade-in-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.portfolio-card:hover,
+.portfolio-card:focus-visible {
+  background: var(--glass-fill-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--glass-shadow-hover);
+}
+
+.portfolio-card:active {
+  transform: scale(0.98);
+}
+
+.portfolio-card:focus-visible {
+  outline: 2px solid var(--fg-muted);
+  outline-offset: 2px;
+}
+
+.portfolio-grid .portfolio-card:nth-child(2) {
+  animation-delay: 60ms;
+}
+.portfolio-grid .portfolio-card:nth-child(3) {
+  animation-delay: 120ms;
+}
+.portfolio-grid .portfolio-card:nth-child(4) {
+  animation-delay: 180ms;
+}
+.portfolio-grid .portfolio-card:nth-child(5) {
+  animation-delay: 240ms;
+}
+.portfolio-grid .portfolio-card:nth-child(6) {
+  animation-delay: 300ms;
+}
+
+.portfolio-card__thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background-size: cover;
+  background-position: center;
+}
+
+.portfolio-card__thumb--placeholder {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #d4d4d8, #a1a1aa);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.portfolio-card__thumb--placeholder svg {
+  width: 32px;
+  height: 32px;
+}
+
+.portfolio-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px 16px;
+}
+
+.portfolio-card__title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.portfolio-card__description {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fg-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* --- Entrance animation --- */
 
 @keyframes fade-in-up {
@@ -545,7 +696,9 @@ a.row:active {
 .handles,
 .pill-row,
 .group,
-.bottom-row {
+.bottom-row,
+.page-header,
+.portfolio-grid {
   animation: fade-in-up 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -564,6 +717,12 @@ a.row:active {
 .bottom-row {
   animation-delay: 380ms;
 }
+.page-header {
+  animation-delay: 0ms;
+}
+.portfolio-grid {
+  animation-delay: 140ms;
+}
 
 .row {
   animation: fade-in-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -577,6 +736,9 @@ a.row:active {
 }
 .group__rows .row:nth-child(3) {
   animation-delay: 340ms;
+}
+.group__rows .row:nth-child(4) {
+  animation-delay: 380ms;
 }
 
 @media (min-width: 640px) {

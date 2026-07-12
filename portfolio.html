@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="zephyn — Roblox developer portfolio." />
+    <title>Portfolio — zephyn</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="page">
+      <div class="blobs" aria-hidden="true">
+        <div class="blob blob--a"></div>
+        <div class="blob blob--b"></div>
+        <div class="blob blob--c"></div>
+      </div>
+
+      <main class="content">
+        <header class="page-header">
+          <a class="back-link" href="/">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Back
+          </a>
+          <h1 class="page-title">Portfolio</h1>
+        </header>
+
+        <div class="portfolio-grid" id="portfolio-grid"></div>
+
+        <div class="bottom-row">
+          <footer class="footer">
+            <p class="footer__pill">
+              <span>&copy; zephyn</span>
+              <span id="year"></span>
+            </p>
+          </footer>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/portfolio.ts"></script>
+  </body>
+</html>

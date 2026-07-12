@@ -25,4 +25,28 @@ export const config = {
   tiktok: {
     url: "https://www.tiktok.com/@zeph.dev",
   },
+
+  // TODO: replace with your real projects — title, a short description,
+  // an image (drop files in /public and reference them as "/your-file.png"),
+  // and the link each card should open.
+  portfolio: [
+    {
+      title: "Project One",
+      description: "Add a short description of this project here.",
+      image: "",
+      url: "#",
+    },
+    {
+      title: "Project Two",
+      description: "Add a short description of this project here.",
+      image: "",
+      url: "#",
+    },
+    {
+      title: "Project Three",
+      description: "Add a short description of this project here.",
+      image: "",
+      url: "#",
+    },
+  ],
 } as const;
