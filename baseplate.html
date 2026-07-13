@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="zephyn — check out Baseplate." />
+    <title>Baseplate — zephyn</title>
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="zephyn" />
+    <meta property="og:url" content="https://www.zephyn.dev/baseplate" />
+    <meta property="og:title" content="Baseplate — zephyn" />
+    <meta property="og:description" content="Check out Baseplate." />
+    <meta property="og:image" content="https://www.zephyn.dev/og-image.png" />
+    <meta property="og:image:width" content="2400" />
+    <meta property="og:image:height" content="1260" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Baseplate — zephyn" />
+    <meta name="twitter:description" content="Check out Baseplate." />
+    <meta name="twitter:image" content="https://www.zephyn.dev/og-image.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="page">
+      <div class="blobs" aria-hidden="true">
+        <div class="blob blob--a"></div>
+        <div class="blob blob--b"></div>
+        <div class="blob blob--c"></div>
+      </div>
+
+      <main class="content">
+        <header class="page-header">
+          <a class="back-link" href="/">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Back
+          </a>
+          <h1 class="page-title">Baseplate</h1>
+        </header>
+
+        <a class="baseplate-cta" href="https://www.baseplate.bio/" target="_blank" rel="noopener noreferrer">
+          Check out Baseplate now!
+          <svg class="baseplate-cta__arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7 17L17 7M17 7H9M17 7V15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+
+        <div class="bottom-row">
+          <footer class="footer">
+            <p class="footer__pill">
+              <span>&copy; zephyn</span>
+              <span id="year"></span>
+            </p>
+          </footer>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/baseplate.ts"></script>
+  </body>
+</html>
