@@ -9,7 +9,7 @@ export const config = {
   discord: {
     // Only used for the live Lanyard presence widget in the hero — the
     // "Pages" links group no longer includes a Discord row.
-    userId: "1524022628744954017",
+    userId: "1491487646424498357",
   },
 
   youtube: {
