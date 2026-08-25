@@ -1268,9 +1268,28 @@ a.review-card--feed:focus-visible {
   animation-delay: 380ms;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 640px) and (max-width: 899px) {
   .content {
     padding-top: 128px;
+  }
+}
+
+@media (min-width: 900px) {
+  .content {
+    flex: 1;
+    justify-content: center;
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  .content__center {
+    width: 100%;
+    max-width: 480px;
+    transform: scale(1.18);
+  }
+
+  .bottom-row {
+    margin-top: 48px;
   }
 }
 
