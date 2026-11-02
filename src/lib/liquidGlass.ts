@@ -94,4 +94,99 @@ export function initLiquidGlass(): void {
   document.documentElement.classList.add("lg-refract");
 }
 
+// --- Cursor-reactive glass (mouse / trackpad only) ---
+//
+// Sets --lx/--ly on each glass surface to the cursor position inside it
+// (style.css turns that into a sliding highlight and a brighter rim), and
+// tilts the main card slightly toward the cursor. Work is batched to one
+// update per animation frame, and only surfaces near the cursor are touched.
+
+const SURFACES =
+  ".pill, .status-bubble, .row, .back-link, .portfolio-card, .project-detail__link, " +
+  ".baseplate-cta, .review-card, .review-form, .admin-review, .footer__pill, .activity, .group";
+const NEAR_PX = 260; // only update surfaces within this distance of the cursor
+const MAX_TILT_DEG = 3;
+
+export function initGlassPointer(): void {
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  if (prefersPlainSurfaces()) return;
+
+  const root = document.documentElement;
+  root.classList.add("has-pointer");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  let pointerX = 0;
+  let pointerY = 0;
+  let framePending = false;
+  const lit = new Set<HTMLElement>();
+
+  function update() {
+    framePending = false;
+    const nowLit = new Set<HTMLElement>();
+
+    for (const el of document.querySelectorAll<HTMLElement>(SURFACES)) {
+      const r = el.getBoundingClientRect();
+      const near =
+        pointerX > r.left - NEAR_PX &&
+        pointerX < r.right + NEAR_PX &&
+        pointerY > r.top - NEAR_PX &&
+        pointerY < r.bottom + NEAR_PX;
+      if (!near) continue;
+      // Convert to the element's own (unscaled) coordinates, since the desktop
+      // layout scales the whole card up with a transform.
+      const scaleX = r.width / (el.offsetWidth || r.width);
+      const scaleY = r.height / (el.offsetHeight || r.height);
+      el.style.setProperty("--lx", `${(pointerX - r.left) / scaleX}px`);
+      el.style.setProperty("--ly", `${(pointerY - r.top) / scaleY}px`);
+      nowLit.add(el);
+    }
+
+    // Surfaces the cursor moved away from: park the highlight off-element.
+    for (const el of lit) {
+      if (!nowLit.has(el)) {
+        el.style.removeProperty("--lx");
+        el.style.removeProperty("--ly");
+      }
+    }
+    lit.clear();
+    for (const el of nowLit) lit.add(el);
+
+    const card = document.querySelector<HTMLElement>(".groups");
+    if (card && !reducedMotion.matches) {
+      const r = card.getBoundingClientRect();
+      const dx = Math.max(-1, Math.min(1, (pointerX - (r.left + r.width / 2)) / (r.width / 2 + 200)));
+      const dy = Math.max(-1, Math.min(1, (pointerY - (r.top + r.height / 2)) / (r.height / 2 + 200)));
+      card.style.setProperty("--tilt-y", `${(dx * MAX_TILT_DEG).toFixed(2)}deg`);
+      card.style.setProperty("--tilt-x", `${(-dy * MAX_TILT_DEG).toFixed(2)}deg`);
+    }
+  }
+
+  window.addEventListener(
+    "pointermove",
+    (event) => {
+      if (event.pointerType !== "mouse" && event.pointerType !== "pen") return;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      if (!framePending) {
+        framePending = true;
+        requestAnimationFrame(update);
+      }
+    },
+    { passive: true },
+  );
+
+  // Cursor left the window: settle everything back to rest.
+  document.addEventListener("pointerleave", () => {
+    for (const el of lit) {
+      el.style.removeProperty("--lx");
+      el.style.removeProperty("--ly");
+    }
+    lit.clear();
+    const card = document.querySelector<HTMLElement>(".groups");
+    card?.style.removeProperty("--tilt-x");
+    card?.style.removeProperty("--tilt-y");
+  });
+}
+
 initLiquidGlass();
+initGlassPointer();

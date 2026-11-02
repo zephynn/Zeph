@@ -178,6 +178,11 @@ a {
     animation: none;
   }
 
+  .groups {
+    transform: none;
+    transition: none;
+  }
+
   a.row:active,
   .back-link:active,
   .portfolio-card:active,
@@ -205,12 +210,27 @@ a {
   transform: scale(1.2);
   filter: blur(100px) saturate(160%);
   opacity: 0;
-  transition: opacity 900ms ease;
+  transition: opacity 1200ms ease;
   pointer-events: none;
 }
 
-body.has-avatar-bg .bg-avatar {
+/* Two layers crossfade: only the active one is visible (see setBackground). */
+body.has-avatar-bg .bg-avatar.is-active {
   opacity: 1;
+}
+
+/* --- Film grain --- */
+/* A faint static noise texture over the background. Stops big blurred areas
+   from banding and gives the page some texture. Below the content, so text
+   and glass stay crisp. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.09;
+  background-size: 160px 160px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1.6 -0.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 body.has-avatar-bg .blobs {
@@ -299,6 +319,69 @@ body.has-avatar-bg .blobs {
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
   pointer-events: none;
+}
+
+/* --- Liquid Glass: cursor-following shine (desktop only) --- */
+/* liquidGlass.ts sets --lx/--ly on each surface to the cursor position
+   inside it, so a soft highlight slides across the glass and the rim
+   brightens on the side nearest the cursor. */
+
+.group::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+html.has-pointer .pill::before,
+html.has-pointer .status-bubble::before,
+html.has-pointer .row::before,
+html.has-pointer .back-link::before,
+html.has-pointer .portfolio-card::before,
+html.has-pointer .project-detail__link::before,
+html.has-pointer .baseplate-cta::before,
+html.has-pointer .review-card::before,
+html.has-pointer .review-form::before,
+html.has-pointer .admin-review::before,
+html.has-pointer .footer__pill::before,
+html.has-pointer .activity::before,
+html.has-pointer .group::before {
+  background: radial-gradient(
+      220px circle at var(--lx, -500px) var(--ly, -500px),
+      rgba(255, 255, 255, 0.28),
+      rgba(255, 255, 255, 0) 70%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 45%);
+}
+
+html.has-pointer .group::before {
+  background: radial-gradient(
+    360px circle at var(--lx, -500px) var(--ly, -500px),
+    rgba(255, 255, 255, 0.16),
+    rgba(255, 255, 255, 0) 70%
+  );
+}
+
+html.has-pointer .pill::after,
+html.has-pointer .status-bubble::after,
+html.has-pointer .row::after,
+html.has-pointer .back-link::after,
+html.has-pointer .portfolio-card::after,
+html.has-pointer .project-detail__link::after,
+html.has-pointer .baseplate-cta::after,
+html.has-pointer .review-card::after,
+html.has-pointer .review-form::after,
+html.has-pointer .admin-review::after,
+html.has-pointer .footer__pill::after,
+html.has-pointer .activity::after,
+html.has-pointer .group::after {
+  background: radial-gradient(
+      160px circle at var(--lx, -500px) var(--ly, -500px),
+      rgba(255, 255, 255, 1),
+      rgba(255, 255, 255, 0) 70%
+    ),
+    var(--glass-rim);
 }
 
 /* --- Liquid Glass: refraction (Chromium only, see src/lib/liquidGlass.ts) --- */
@@ -443,7 +526,22 @@ html.lg-refract .activity {
   background: linear-gradient(135deg, #a1a1aa, #52525b);
 }
 
+/* Discord draws decorations at 1.2x the avatar, centred on it. */
+.avatar-decoration {
+  position: absolute;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.avatar-decoration[hidden] {
+  display: none;
+}
+
 .status-dot {
+  z-index: 2;
   position: absolute;
   bottom: 4px;
   right: 4px;
@@ -701,6 +799,9 @@ a.activity:focus-visible {
 .groups {
   position: relative;
   width: 100%;
+  /* Tilt toward the cursor (set by liquidGlass.ts; desktop only). */
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
   margin-top: 40px;
   display: flex;
   flex-direction: column;

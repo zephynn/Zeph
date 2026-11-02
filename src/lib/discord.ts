@@ -41,6 +41,11 @@ export interface LanyardData {
     global_name?: string | null;
     discriminator: string;
     avatar: string | null;
+    avatar_decoration_data?: {
+      asset: string;
+      sku_id?: string;
+      expires_at?: number | null;
+    } | null;
   };
   discord_status: "online" | "idle" | "dnd" | "offline";
   activities: LanyardActivity[];
@@ -222,4 +227,15 @@ export function activityAssetUrl(activity: LanyardActivity, key: string | undefi
     return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${key}.png`;
   }
   return null;
+}
+
+/**
+ * Animated avatar decoration (the frame around the pfp). Discord draws it at
+ * 1.2x the avatar size. `passthrough=true` keeps the APNG animation; false
+ * gives the first frame only (used for reduced motion).
+ */
+export function avatarDecorationUrl(user: LanyardData["discord_user"], animated: boolean): string | null {
+  const asset = user.avatar_decoration_data?.asset;
+  if (!asset) return null;
+  return `https://cdn.discordapp.com/avatar-decoration-presets/${asset}.png?size=240&passthrough=${animated}`;
 }

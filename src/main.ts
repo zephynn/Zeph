@@ -5,6 +5,7 @@ import {
   createPresenceSource,
   discordAvatarUrl,
   activityAssetUrl,
+  avatarDecorationUrl,
   STATUS_LABEL,
   type LanyardData,
   type LanyardActivity,
@@ -32,21 +33,61 @@ const statusDotEl = document.getElementById("status-dot")!;
 const statusBubbleEl = document.getElementById("status-bubble")!;
 const activitiesEl = document.getElementById("activities")!;
 
-// --- Background: blurred avatar ---
+// --- Background: album art while Spotify is playing, otherwise the pfp ---
+// Two stacked layers: the new image loads into the hidden one, then they
+// swap opacity, so the page fades between backgrounds instead of jumping.
 
+const bgLayers = [bgAvatarEl, document.getElementById("bg-avatar-2")!];
+let activeBgLayer = 0;
 let lastBgUrl = "";
 
-function renderBackground(user: LanyardData["discord_user"]) {
-  // Larger source for the background blur — blur washes out detail anyway,
-  // so a bigger fetch just avoids visible pixelation/banding once scaled up.
-  const url = discordAvatarUrl(user, 512);
+function setBackground(url: string) {
   if (url === lastBgUrl) return;
   lastBgUrl = url;
-  bgAvatarEl.style.backgroundImage = `url(${url})`;
-  document.body.classList.add("has-avatar-bg");
+
+  // Preload first so the crossfade never fades in a blank layer.
+  const img = new Image();
+  img.onload = () => {
+    if (url !== lastBgUrl) return; // a newer background was requested meanwhile
+    const next = 1 - activeBgLayer;
+    bgLayers[next].style.backgroundImage = `url(${url})`;
+    bgLayers[next].classList.add("is-active");
+    bgLayers[activeBgLayer].classList.remove("is-active");
+    activeBgLayer = next;
+    document.body.classList.add("has-avatar-bg");
+  };
+  img.src = url;
+
   void estimateLuminance(url).then((luminance) => {
-    document.body.classList.toggle("dark-bg-text", luminance < 0.45);
+    if (url === lastBgUrl) document.body.classList.toggle("dark-bg-text", luminance < 0.45);
   });
+}
+
+function renderBackground(data: LanyardData) {
+  const albumArt = data.listening_to_spotify ? data.spotify?.album_art_url : null;
+  // Larger pfp source for the background blur — blur washes out detail
+  // anyway, so a bigger fetch just avoids visible banding once scaled up.
+  setBackground(albumArt || discordAvatarUrl(data.discord_user, 512));
+}
+
+// --- Avatar decoration ---
+
+const decorationEl = document.getElementById("avatar-decoration") as HTMLImageElement;
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+decorationEl.addEventListener("error", () => {
+  decorationEl.hidden = true;
+});
+
+function renderDecoration(user: LanyardData["discord_user"]) {
+  const url = avatarDecorationUrl(user, !reducedMotion.matches);
+  if (!url) {
+    decorationEl.hidden = true;
+    decorationEl.removeAttribute("src");
+    return;
+  }
+  if (decorationEl.getAttribute("src") !== url) decorationEl.src = url;
+  decorationEl.hidden = false;
 }
 
 // --- Custom status bubble (the "speech bubble" next to the avatar) ---
@@ -213,7 +254,8 @@ function renderDiscord(data: LanyardData) {
   avatarEl.classList.remove("is-hidden");
   avatarPlaceholderEl.classList.add("is-hidden");
 
-  renderBackground(data.discord_user);
+  renderBackground(data);
+  renderDecoration(data.discord_user);
 
   statusDotEl.dataset.status = data.discord_status;
   statusDotEl.setAttribute("aria-label", `Discord status: ${STATUS_LABEL[data.discord_status]}`);

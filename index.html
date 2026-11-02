@@ -35,7 +35,10 @@
         <div class="blob blob--b"></div>
         <div class="blob blob--c"></div>
       </div>
+      <!-- Two background layers so a new background (pfp ↔ album art) can crossfade in. -->
       <div class="bg-avatar" id="bg-avatar" aria-hidden="true"></div>
+      <div class="bg-avatar" id="bg-avatar-2" aria-hidden="true"></div>
+      <div class="grain" aria-hidden="true"></div>
 
       <main class="content">
         <div class="content__center">
@@ -44,6 +47,7 @@
             <div class="avatar-wrap">
               <div id="avatar-placeholder" class="avatar avatar--placeholder" aria-hidden="true">Z</div>
               <img id="discord-avatar" class="avatar is-hidden" alt="" width="96" height="96" />
+              <img id="avatar-decoration" class="avatar-decoration" alt="" aria-hidden="true" hidden />
               <span id="status-dot" class="status-dot" role="img" aria-label="Discord status: offline"></span>
             </div>
             <div class="hero__identity">
