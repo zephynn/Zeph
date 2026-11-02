@@ -18,8 +18,7 @@ export const config = {
   },
 
   roblox: {
-    // TODO: replace with your actual Roblox profile URL (e.g. https://www.roblox.com/users/<id>/profile)
-    url: "https://www.roblox.com/users/0/profile",
+    url: "https://www.roblox.com/users/1576949974/profile",
   },
 
   tiktok: {
