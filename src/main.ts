@@ -240,15 +240,6 @@ function buildSpotifyCard(spotify: LanyardSpotify): HTMLElement {
     },
   });
 
-  if (spotify.track_id) {
-    const listen = el("a", "activity__action");
-    listen.href = `https://open.spotify.com/track/${spotify.track_id}`;
-    listen.target = "_blank";
-    listen.rel = "noopener noreferrer";
-    listen.append(spotifyIcon("activity__action-icon"), "Listen on Spotify");
-    body.appendChild(listen);
-  }
-
   card.appendChild(body);
   return card;
 }
