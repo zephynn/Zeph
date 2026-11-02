@@ -5,6 +5,10 @@ export interface LanyardActivity {
   state?: string;
   details?: string;
   application_id?: string;
+  timestamps?: {
+    start?: number;
+    end?: number;
+  };
   assets?: {
     large_image?: string;
     large_text?: string;
@@ -21,6 +25,15 @@ export interface LanyardActivity {
   };
 }
 
+export interface LanyardSpotify {
+  track_id: string | null;
+  song: string;
+  artist: string;
+  album: string;
+  album_art_url: string | null;
+  timestamps: { start: number; end: number };
+}
+
 export interface LanyardData {
   discord_user: {
     id: string;
@@ -31,6 +44,8 @@ export interface LanyardData {
   };
   discord_status: "online" | "idle" | "dnd" | "offline";
   activities: LanyardActivity[];
+  listening_to_spotify?: boolean;
+  spotify?: LanyardSpotify | null;
   active_on_discord_mobile: boolean;
   active_on_discord_desktop: boolean;
   active_on_discord_web: boolean;
@@ -140,3 +155,30 @@ export const STATUS_LABEL: Record<LanyardData["discord_status"], string> = {
   dnd: "Do Not Disturb",
   offline: "Offline",
 };
+
+/**
+ * Resolves a Rich Presence asset key to an image URL. Discord sends three
+ * shapes: "mp:external/..." (proxied external image), "spotify:<id>" (album
+ * art), or a plain numeric id that belongs to the activity's application.
+ */
+export function activityAssetUrl(activity: LanyardActivity, key: string | undefined): string | null {
+  if (!key) return null;
+  if (key.startsWith("mp:")) return `https://media.discordapp.net/${key.slice(3)}`;
+  if (key.startsWith("spotify:")) return `https://i.scdn.co/image/${key.slice(8)}`;
+  if (activity.application_id && /^\d+$/.test(key)) {
+    return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${key}.png`;
+  }
+  return null;
+}
+
+/** Banner URL from /api/discord-banner, or null (no banner / not configured / error). */
+export async function fetchDiscordBanner(): Promise<string | null> {
+  try {
+    const res = await fetch("/api/discord-banner");
+    if (!res.ok) return null;
+    const json = await res.json();
+    return typeof json.bannerUrl === "string" ? json.bannerUrl : null;
+  } catch {
+    return null;
+  }
+}

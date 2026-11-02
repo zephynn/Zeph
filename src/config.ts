@@ -1,7 +1,6 @@
 export const config = {
   displayName: "zephyn",
   tagline: "Roblox Developer",
-  handles: ["zephyn.fbx", "zephynnn", "zeph.dev"],
 
   // IANA timezone used for the live local-time pill.
   timezone: "Europe/London",

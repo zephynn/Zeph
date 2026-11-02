@@ -47,6 +47,9 @@
 /* Flipped automatically when the avatar's average brightness is low. Only
    the text colour changes — the glass itself stays the same clear glass. */
 body.dark-bg-text {
+  /* Clear glass doesn't hide bright patches of the background, so light text
+     gets a faint shadow to stay readable over them. */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
   --fg: #f4f4f5;
   --fg-muted: #f4f4f5;
   /* Reduced-transparency fallback only: a dark solid so light text stays readable. */
@@ -165,8 +168,14 @@ a {
     display: none;
   }
 
-  .avatar {
+  .avatar,
+  .name,
+  .activity__bar-fill {
     transition: none;
+  }
+
+  .activities {
+    animation: none;
   }
 
   a.row:active,
@@ -204,6 +213,14 @@ body.has-avatar-bg .bg-avatar {
   opacity: 1;
 }
 
+/* A banner is meant to be seen, so it gets a much lighter blur than the avatar
+   (just enough to hide upscaling on big screens). */
+body.has-banner-bg .bg-avatar {
+  inset: -2%;
+  transform: scale(1.04);
+  filter: blur(14px) saturate(120%);
+}
+
 body.has-avatar-bg .blobs {
   opacity: 0;
   transition: opacity 900ms ease;
@@ -221,7 +238,8 @@ body.has-avatar-bg .blobs {
 .review-card,
 .review-form,
 .admin-review,
-.footer__pill {
+.footer__pill,
+.activity {
   position: relative;
   overflow: hidden;
   background: var(--glass-fill);
@@ -241,7 +259,8 @@ body.has-avatar-bg .blobs {
 .review-card::before,
 .review-form::before,
 .admin-review::before,
-.footer__pill::before {
+.footer__pill::before,
+.activity::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -276,6 +295,7 @@ body.has-avatar-bg .blobs {
 .review-form::after,
 .admin-review::after,
 .footer__pill::after,
+.activity::after,
 .group::after {
   content: "";
   position: absolute;
@@ -300,7 +320,8 @@ html.lg-refract .status-bubble,
 html.lg-refract .back-link,
 html.lg-refract .project-detail__link,
 html.lg-refract .baseplate-cta,
-html.lg-refract .footer__pill {
+html.lg-refract .footer__pill,
+html.lg-refract .activity {
   backdrop-filter: blur(var(--glass-blur)) url(#lg-refract) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) url(#lg-refract) saturate(var(--glass-saturate));
 }
@@ -319,6 +340,7 @@ html.lg-refract .footer__pill {
   .review-form,
   .admin-review,
   .footer__pill,
+  .activity,
   .group {
     background: var(--glass-solid);
     border-color: var(--glass-solid-border);
@@ -337,6 +359,7 @@ html.lg-refract .footer__pill {
   .review-form::before,
   .admin-review::before,
   .footer__pill::before,
+  .activity::before,
   .pill::after,
   .status-bubble::after,
   .row::after,
@@ -348,6 +371,7 @@ html.lg-refract .footer__pill {
   .review-form::after,
   .admin-review::after,
   .footer__pill::after,
+  .activity::after,
   .group::after {
     display: none;
   }
@@ -504,11 +528,147 @@ html.lg-refract .footer__pill {
   margin: 0;
 }
 
-.handles {
-  font-family: var(--font-body);
-  color: var(--fg-muted);
+/* Offline: no status bubble, so the name drops to the bottom of the avatar
+   row and grows to fill the space. */
+body.is-offline .hero__identity {
+  align-self: stretch;
+  justify-content: flex-end;
+  min-height: 96px;
+}
+
+body.is-offline .name {
+  font-size: 42px;
+  line-height: 1;
+  padding-bottom: 6px;
+}
+
+.name {
+  transition: font-size 300ms ease;
+}
+
+/* --- Live Discord activities --- */
+
+.activities {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 24px;
+  animation: fade-in-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.activities[hidden] {
+  display: none;
+}
+
+.activity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px 12px 12px;
+  border-radius: 24px;
+}
+
+a.activity {
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
+}
+
+a.activity:hover,
+a.activity:focus-visible {
+  background: var(--glass-fill-hover);
+  box-shadow: var(--glass-shadow-hover);
+}
+
+a.activity:active {
+  transform: scale(0.97);
+  transition-duration: 120ms;
+}
+
+a.activity:focus-visible {
+  outline: 2px solid var(--fg-muted);
+  outline-offset: 2px;
+}
+
+.activity__art {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.activity__art--placeholder {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 24px;
+  color: #fff;
+  background: linear-gradient(135deg, #a1a1aa, #52525b);
+}
+
+.activity__body {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 1;
+}
+
+.activity__body p {
   margin: 0;
-  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.activity__title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.activity__line {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.activity__progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.activity__time {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.activity__bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.3);
+  overflow: hidden;
+}
+
+.activity__bar-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: currentColor;
+  transition: width 1s linear;
 }
 
 .pill-row {

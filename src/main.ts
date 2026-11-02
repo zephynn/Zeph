@@ -1,15 +1,21 @@
 import "./style.css";
 import "./lib/liquidGlass";
 import { config } from "./config";
-import { LanyardClient, discordAvatarUrl, STATUS_LABEL, type LanyardData, type LanyardActivity } from "./lib/discord";
+import {
+  LanyardClient,
+  discordAvatarUrl,
+  activityAssetUrl,
+  fetchDiscordBanner,
+  STATUS_LABEL,
+  type LanyardData,
+  type LanyardActivity,
+  type LanyardSpotify,
+} from "./lib/discord";
 import { watchYoutubeStats, formatCount } from "./lib/youtube";
 import { describeLocalTime } from "./lib/time";
 import { estimateLuminance } from "./lib/color";
 import { animateCount } from "./lib/animate";
 import { fetchViewCount } from "./lib/views";
-
-const yearEl = document.getElementById("year")!;
-yearEl.textContent = String(new Date().getFullYear());
 
 const robloxLink = document.getElementById("card-roblox") as HTMLAnchorElement;
 robloxLink.href = config.roblox.url;
@@ -20,14 +26,66 @@ youtubeLink.href = config.youtube.url;
 const tiktokLink = document.getElementById("card-tiktok") as HTMLAnchorElement;
 tiktokLink.href = config.tiktok.url;
 
-const handlesEl = document.getElementById("handles")!;
-handlesEl.textContent = `(${config.handles.map((h) => `@${h}`).join(" / ")})`;
-
 const avatarEl = document.getElementById("discord-avatar") as HTMLImageElement;
 const avatarPlaceholderEl = document.getElementById("avatar-placeholder")!;
 const bgAvatarEl = document.getElementById("bg-avatar")!;
 const statusDotEl = document.getElementById("status-dot")!;
 const statusBubbleEl = document.getElementById("status-bubble")!;
+const activitiesEl = document.getElementById("activities")!;
+
+// --- Background: Discord banner if there is one, otherwise blurred avatar ---
+
+// Started immediately so it's usually resolved by the time Lanyard answers,
+// which avoids flashing the avatar background before swapping to the banner.
+const bannerPromise = fetchDiscordBanner();
+let lastBgUrl = "";
+
+function setBackground(url: string, kind: "banner" | "avatar") {
+  if (url === lastBgUrl) return;
+  lastBgUrl = url;
+  bgAvatarEl.style.backgroundImage = `url(${url})`;
+  document.body.classList.add("has-avatar-bg");
+  document.body.classList.toggle("has-banner-bg", kind === "banner");
+  void estimateLuminance(url).then((luminance) => {
+    document.body.classList.toggle("dark-bg-text", luminance < 0.45);
+  });
+}
+
+async function renderBackground(user: LanyardData["discord_user"]) {
+  const bannerUrl = await bannerPromise;
+  if (bannerUrl) {
+    setBackground(bannerUrl, "banner");
+  } else {
+    // Larger source for the background blur — blur washes out detail anyway,
+    // so a bigger fetch just avoids visible pixelation/banding once scaled up.
+    setBackground(discordAvatarUrl(user, 512), "avatar");
+  }
+}
+
+// --- Custom status bubble (the "speech bubble" next to the avatar) ---
+
+function renderStatusBubble(activities: LanyardActivity[]) {
+  statusBubbleEl.replaceChildren();
+
+  const custom = activities.find((a) => a.type === 4);
+  const emoji = custom?.emoji;
+  const text = custom?.state ?? "";
+
+  if (emoji?.id) {
+    const img = document.createElement("img");
+    img.src = `https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? "gif" : "png"}`;
+    img.alt = "";
+    img.className = "status-emoji";
+    statusBubbleEl.appendChild(img);
+  } else if (emoji?.name) {
+    statusBubbleEl.appendChild(document.createTextNode(`${emoji.name} `));
+  }
+  if (text) statusBubbleEl.appendChild(document.createTextNode(text));
+
+  statusBubbleEl.hidden = !text && !emoji;
+}
+
+// --- Activity cards (Spotify, games, apps) ---
 
 const ACTIVITY_VERB: Record<number, string> = {
   0: "Playing",
@@ -37,58 +95,130 @@ const ACTIVITY_VERB: Record<number, string> = {
   5: "Competing in",
 };
 
-interface ActivityContent {
-  emojiUrl?: string;
-  emojiUnicode?: string;
-  text: string;
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text?: string) {
+  const node = document.createElement(tag);
+  node.className = className;
+  if (text) node.textContent = text;
+  return node;
 }
 
-function getActivityContent(activities: LanyardActivity[]): ActivityContent | null {
-  const custom = activities.find((a) => a.type === 4);
-  if (custom?.state || custom?.emoji) {
-    const emoji = custom.emoji;
-    return {
-      emojiUrl: emoji?.id ? `https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? "gif" : "png"}` : undefined,
-      emojiUnicode: emoji && !emoji.id ? emoji.name : undefined,
-      text: custom.state ?? "",
-    };
-  }
-
-  const other = activities.find((a) => a.type !== 4);
-  if (other) {
-    const verb = ACTIVITY_VERB[other.type] ?? "";
-    return { text: [verb, other.name].filter(Boolean).join(" ") };
-  }
-
-  return null;
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function renderStatusBubble(content: ActivityContent | null) {
-  statusBubbleEl.replaceChildren();
+/** Elements whose text/width depends on the current time, refreshed every second. */
+interface LiveTimer {
+  update: (now: number) => void;
+}
+let liveTimers: LiveTimer[] = [];
 
-  if (!content) {
-    statusBubbleEl.hidden = true;
-    return;
+function buildArt(url: string | null, fallbackLetter: string): HTMLElement {
+  if (!url) {
+    const placeholder = el("div", "activity__art activity__art--placeholder", fallbackLetter.slice(0, 1).toUpperCase());
+    placeholder.setAttribute("aria-hidden", "true");
+    return placeholder;
   }
-
-  if (content.emojiUrl) {
-    const img = document.createElement("img");
-    img.src = content.emojiUrl;
-    img.alt = "";
-    img.className = "status-emoji";
-    statusBubbleEl.appendChild(img);
-  } else if (content.emojiUnicode) {
-    statusBubbleEl.appendChild(document.createTextNode(`${content.emojiUnicode} `));
-  }
-
-  if (content.text) {
-    statusBubbleEl.appendChild(document.createTextNode(content.text));
-  }
-
-  statusBubbleEl.hidden = !content.text && !content.emojiUrl && !content.emojiUnicode;
+  const img = el("img", "activity__art");
+  img.src = url;
+  img.alt = "";
+  img.loading = "lazy";
+  img.addEventListener("error", () => img.replaceWith(buildArt(null, fallbackLetter)));
+  return img;
 }
 
-let lastBgAvatarUrl = "";
+function buildSpotifyCard(spotify: LanyardSpotify): HTMLElement {
+  const card = el(spotify.track_id ? "a" : "div", "activity activity--spotify");
+  if (card instanceof HTMLAnchorElement && spotify.track_id) {
+    card.href = `https://open.spotify.com/track/${spotify.track_id}`;
+    card.target = "_blank";
+    card.rel = "noopener noreferrer";
+  }
+
+  card.appendChild(buildArt(spotify.album_art_url, spotify.song));
+
+  const body = el("div", "activity__body");
+  body.appendChild(el("p", "activity__label", "Listening on Spotify"));
+  body.appendChild(el("p", "activity__title", spotify.song));
+  body.appendChild(el("p", "activity__line", spotify.artist.split(";").join(",")));
+
+  const { start, end } = spotify.timestamps;
+  const progress = el("div", "activity__progress");
+  const bar = el("div", "activity__bar");
+  const fill = el("div", "activity__bar-fill");
+  bar.appendChild(fill);
+  const elapsed = el("span", "activity__time");
+  const total = el("span", "activity__time", formatDuration(end - start));
+  progress.append(elapsed, bar, total);
+  body.appendChild(progress);
+
+  liveTimers.push({
+    update(now) {
+      const clamped = Math.min(Math.max(now - start, 0), end - start);
+      elapsed.textContent = formatDuration(clamped);
+      fill.style.width = `${(clamped / (end - start)) * 100}%`;
+    },
+  });
+
+  card.appendChild(body);
+  return card;
+}
+
+function buildActivityCard(activity: LanyardActivity): HTMLElement {
+  const card = el("div", "activity");
+  card.appendChild(buildArt(activityAssetUrl(activity, activity.assets?.large_image), activity.name));
+
+  const body = el("div", "activity__body");
+  body.appendChild(el("p", "activity__label", ACTIVITY_VERB[activity.type] ?? "Using"));
+  body.appendChild(el("p", "activity__title", activity.name));
+  if (activity.details) body.appendChild(el("p", "activity__line", activity.details));
+  if (activity.state) body.appendChild(el("p", "activity__line", activity.state));
+
+  const start = activity.timestamps?.start;
+  if (start) {
+    const time = el("p", "activity__line activity__elapsed");
+    body.appendChild(time);
+    liveTimers.push({
+      update(now) {
+        time.textContent = `${formatDuration(now - start)} elapsed`;
+      },
+    });
+  }
+
+  card.appendChild(body);
+  return card;
+}
+
+function renderActivities(data: LanyardData) {
+  liveTimers = [];
+  activitiesEl.replaceChildren();
+
+  const cards: HTMLElement[] = [];
+  if (data.listening_to_spotify && data.spotify) cards.push(buildSpotifyCard(data.spotify));
+
+  for (const activity of data.activities) {
+    if (activity.type === 4) continue; // custom status → status bubble
+    if (activity.type === 2 && activity.name === "Spotify") continue; // covered by the Spotify card
+    cards.push(buildActivityCard(activity));
+  }
+
+  // Cap it so the profile doesn't turn into a wall of cards.
+  activitiesEl.append(...cards.slice(0, 2));
+  activitiesEl.hidden = cards.length === 0;
+  tickTimers();
+}
+
+function tickTimers() {
+  const now = Date.now();
+  for (const timer of liveTimers) timer.update(now);
+}
+window.setInterval(tickTimers, 1000);
+
+// --- Discord presence ---
 
 function renderDiscord(data: LanyardData) {
   avatarEl.src = discordAvatarUrl(data.discord_user, 128);
@@ -96,22 +226,14 @@ function renderDiscord(data: LanyardData) {
   avatarEl.classList.remove("is-hidden");
   avatarPlaceholderEl.classList.add("is-hidden");
 
-  // Larger source for the background blur — blur washes out detail anyway,
-  // so a bigger fetch just avoids visible pixelation/banding once scaled up.
-  const bgUrl = discordAvatarUrl(data.discord_user, 512);
-  if (bgUrl !== lastBgAvatarUrl) {
-    lastBgAvatarUrl = bgUrl;
-    bgAvatarEl.style.backgroundImage = `url(${bgUrl})`;
-    document.body.classList.add("has-avatar-bg");
-    void estimateLuminance(bgUrl).then((luminance) => {
-      document.body.classList.toggle("dark-bg-text", luminance < 0.45);
-    });
-  }
+  void renderBackground(data.discord_user);
 
   statusDotEl.dataset.status = data.discord_status;
   statusDotEl.setAttribute("aria-label", `Discord status: ${STATUS_LABEL[data.discord_status]}`);
+  document.body.classList.toggle("is-offline", data.discord_status === "offline");
 
-  renderStatusBubble(getActivityContent(data.activities));
+  renderStatusBubble(data.activities);
+  renderActivities(data);
 }
 
 avatarEl.addEventListener("error", () => {
@@ -122,6 +244,8 @@ avatarEl.addEventListener("error", () => {
 const lanyard = new LanyardClient(config.discord.userId);
 lanyard.onUpdate(renderDiscord);
 void lanyard.start();
+
+// --- Pills ---
 
 const followersCountEl = document.getElementById("followers-count")!;
 watchYoutubeStats((stats) => {
@@ -144,10 +268,6 @@ function renderLocalTime() {
 renderLocalTime();
 window.setInterval(renderLocalTime, 30_000);
 
-const viewsPillEl = document.getElementById("views-pill")!;
-const viewsCountEl = document.getElementById("views-count")!;
-void fetchViewCount().then((count) => {
-  if (count === null) return;
-  viewsPillEl.hidden = false;
-  animateCount(viewsCountEl, count, (n) => n.toLocaleString());
-});
+// The view pill is gone from the page, but the visit is still counted so the
+// number on /admin keeps going up.
+void fetchViewCount();
