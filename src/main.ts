@@ -13,7 +13,7 @@ import {
 } from "./lib/discord";
 import { watchYoutubeStats, formatCount } from "./lib/youtube";
 import { describeLocalTime } from "./lib/time";
-import { extractPalette, clampLightness } from "./lib/color";
+import { estimateLuminance } from "./lib/color";
 import { animateCount } from "./lib/animate";
 import { fetchViewCount } from "./lib/views";
 
@@ -28,39 +28,45 @@ tiktokLink.href = config.tiktok.url;
 
 const avatarEl = document.getElementById("discord-avatar") as HTMLImageElement;
 const avatarPlaceholderEl = document.getElementById("avatar-placeholder")!;
+const bgAvatarEl = document.getElementById("bg-avatar")!;
 const statusDotEl = document.getElementById("status-dot")!;
 const statusBubbleEl = document.getElementById("status-bubble")!;
 const activitiesEl = document.getElementById("activities")!;
 
-// --- Background: animated gradient in the pfp's colours ---
-// Four big blurred blobs drift slowly behind everything (see .blob in
-// style.css). Their colours are picked from the pfp; CSS transitions the
-// change, so a new pfp fades the whole gradient over.
+// --- Background: blurred pfp ---
+// Two stacked layers: the new image loads into the hidden one, then they
+// swap opacity, so changing your pfp fades instead of jumping.
 
-const blobsEl = document.getElementById("blobs")!;
-let lastPaletteUrl = "";
+const bgLayers = [bgAvatarEl, document.getElementById("bg-avatar-2")!];
+let activeBgLayer = 0;
+let lastBgUrl = "";
+
+function setBackground(url: string) {
+  if (url === lastBgUrl) return;
+  lastBgUrl = url;
+
+  // Preload first so the crossfade never fades in a blank layer.
+  const img = new Image();
+  img.onload = () => {
+    if (url !== lastBgUrl) return; // a newer background was requested meanwhile
+    const next = 1 - activeBgLayer;
+    bgLayers[next].style.setProperty("--bg-image", `url("${url}")`);
+    bgLayers[next].classList.add("is-active");
+    bgLayers[activeBgLayer].classList.remove("is-active");
+    activeBgLayer = next;
+    document.body.classList.add("has-avatar-bg");
+  };
+  img.src = url;
+
+  void estimateLuminance(url).then((luminance) => {
+    if (url === lastBgUrl) document.body.classList.toggle("dark-bg-text", luminance < 0.45);
+  });
+}
 
 function renderBackground(user: LanyardData["discord_user"]) {
-  // A small source is plenty for colour picking.
-  const url = discordAvatarUrl(user, 128);
-  if (url === lastPaletteUrl) return;
-  lastPaletteUrl = url;
-
-  void extractPalette(url, 4).then((palette) => {
-    if (!palette || url !== lastPaletteUrl) return; // unreadable, or superseded
-    // Text goes light on a dark pfp, dark on a light one. The blobs are then
-    // kept within a brightness range that suits that text, so a white patch
-    // in a dark pfp can't turn into a white area under white text (and vice
-    // versa). Hue and saturation are kept, so the colours still read as yours.
-    const lightText = palette.luminance < 0.45;
-    const [minL, maxL] = lightText ? [0.08, 0.5] : [0.55, 0.94];
-    const colors = palette.colors.map((c) => clampLightness(c, minL, maxL));
-
-    colors.forEach((color, i) => blobsEl.style.setProperty(`--blob-${"abcd"[i]}`, color));
-    // The main colour also fills the gaps between blobs, so nothing shows through grey.
-    blobsEl.style.setProperty("--blob-base", colors[0]);
-    document.body.classList.toggle("dark-bg-text", lightText);
-  });
+  // Larger pfp source for the background blur — blur washes out detail
+  // anyway, so a bigger fetch just avoids visible banding once scaled up.
+  setBackground(discordAvatarUrl(user, 512));
 }
 
 // --- Avatar decoration ---

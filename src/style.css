@@ -32,7 +32,6 @@
   --blob-a: #e4e4e7;
   --blob-b: #ffffff;
   --blob-c: #d4d4d8;
-  --blob-d: #ececef;
 
   --status-online: #23a55a;
   --status-idle: #f0b132;
@@ -90,100 +89,62 @@ a {
 
 /* --- Background blobs --- */
 
-/* --- Animated gradient background --- */
-/* Four big, heavily blurred colour blobs drifting slowly on their own paths,
-   overlapping into a moving gradient. main.ts sets --blob-a…d (and the base
-   colour underneath) from the pfp's colours; until then they're neutral
-   greys. Only `transform` animates, so the browser can move the blurred
-   blobs without redrawing them. */
-
 .blobs {
   position: fixed;
   inset: 0;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
-  background-color: var(--blob-base, var(--bg));
-  transition: background-color 1500ms ease;
 }
 
 .blob {
   position: absolute;
-  width: 65vmax;
-  height: 65vmax;
   border-radius: 50%;
-  filter: blur(90px) saturate(130%);
-  opacity: 0.85;
+  filter: blur(80px);
+  opacity: 0.8;
   will-change: transform;
-  transition: background-color 1500ms ease;
-  animation: blob-drift-a 34s ease-in-out infinite alternate;
+  animation: drift 22s ease-in-out infinite alternate;
 }
 
 .blob--a {
-  top: -25vmax;
-  left: -20vmax;
-  background-color: var(--blob-a);
+  width: 440px;
+  height: 440px;
+  top: -10%;
+  left: -8%;
+  background: var(--blob-a);
 }
 
 .blob--b {
-  top: -15vmax;
-  right: -25vmax;
-  background-color: var(--blob-b);
-  animation-name: blob-drift-b;
-  animation-duration: 41s;
-  animation-delay: -9s;
+  width: 400px;
+  height: 400px;
+  top: 30%;
+  right: -12%;
+  background: var(--blob-b);
+  animation-delay: -7s;
 }
 
 .blob--c {
-  bottom: -30vmax;
-  left: -10vmax;
-  background-color: var(--blob-c);
-  animation-name: blob-drift-c;
-  animation-duration: 38s;
-  animation-delay: -17s;
+  width: 380px;
+  height: 380px;
+  bottom: -12%;
+  left: 20%;
+  background: var(--blob-c);
+  animation-delay: -14s;
 }
 
-.blob--d {
-  bottom: -25vmax;
-  right: -20vmax;
-  width: 55vmax;
-  height: 55vmax;
-  background-color: var(--blob-d);
-  animation-name: blob-drift-d;
-  animation-duration: 45s;
-  animation-delay: -24s;
-}
-
-@keyframes blob-drift-a {
-  0% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(18vmax, 10vmax) scale(1.1); }
-  66% { transform: translate(6vmax, 24vmax) scale(0.92); }
-  100% { transform: translate(22vmax, 18vmax) scale(1.05); }
-}
-
-@keyframes blob-drift-b {
-  0% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(-20vmax, 14vmax) scale(0.9); }
-  66% { transform: translate(-8vmax, 28vmax) scale(1.12); }
-  100% { transform: translate(-24vmax, 6vmax) scale(1); }
-}
-
-@keyframes blob-drift-c {
-  0% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(22vmax, -12vmax) scale(1.08); }
-  66% { transform: translate(34vmax, -2vmax) scale(0.95); }
-  100% { transform: translate(12vmax, -20vmax) scale(1.1); }
-}
-
-@keyframes blob-drift-d {
-  0% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(-16vmax, -18vmax) scale(1.12); }
-  66% { transform: translate(-30vmax, -6vmax) scale(0.94); }
-  100% { transform: translate(-10vmax, -26vmax) scale(1.02); }
+@keyframes drift {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(40px, 30px) scale(1.08);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .blob {
+  .blob,
+  .bg-avatar::before,
+  .bg-avatar::after {
     animation: none;
   }
 
@@ -242,6 +203,71 @@ a {
   }
 }
 
+/* --- PFP-derived background --- */
+/* Large, heavily blurred avatar behind everything, so the page's ambient
+   color follows whatever's in the avatar (a white/light avatar keeps this
+   fully light-mode; a saturated one tints the whole page). Crossfades in
+   once we have a real avatar, replacing the neutral placeholder blobs. */
+
+.bg-avatar {
+  position: fixed;
+  inset: -15%;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 1200ms ease;
+  pointer-events: none;
+}
+
+/* The "wiggle": each layer holds two blurred copies of the pfp (--bg-image,
+   set by main.ts) that slowly rotate, scale and slide against each other on
+   different timings. Where they overlap the colours seem to flow and ripple,
+   so the background looks alive. Each copy is blurred once and then only
+   moved (transform), which keeps it cheap — no per-frame warp filter. */
+.bg-avatar::before,
+.bg-avatar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--bg-image);
+  background-size: cover;
+  background-position: center;
+  filter: blur(100px) saturate(160%);
+  will-change: transform;
+}
+
+.bg-avatar::before {
+  transform: scale(1.2);
+  animation: bg-wiggle-a 19s ease-in-out infinite alternate;
+}
+
+/* Mirrored and semi-transparent, so it blends a different arrangement of
+   the same colours over the first copy. */
+.bg-avatar::after {
+  opacity: 0.55;
+  transform: scale(-1.3, 1.3);
+  animation: bg-wiggle-b 26s ease-in-out infinite alternate;
+  animation-delay: -8s;
+}
+
+@keyframes bg-wiggle-a {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1.2); }
+  33% { transform: translate(3%, -2%) rotate(7deg) scale(1.3); }
+  66% { transform: translate(-3%, 3%) rotate(-5deg) scale(1.22); }
+  100% { transform: translate(2%, 2%) rotate(4deg) scale(1.32); }
+}
+
+@keyframes bg-wiggle-b {
+  0% { transform: translate(0, 0) rotate(0deg) scale(-1.3, 1.3); }
+  33% { transform: translate(-4%, 3%) rotate(-9deg) scale(-1.4, 1.36); }
+  66% { transform: translate(3%, -3%) rotate(6deg) scale(-1.28, 1.42); }
+  100% { transform: translate(-2%, -2%) rotate(-4deg) scale(-1.38, 1.3); }
+}
+
+/* Two layers crossfade: only the active one is visible (see setBackground). */
+body.has-avatar-bg .bg-avatar.is-active {
+  opacity: 1;
+}
+
 /* --- Film grain --- */
 /* A faint static noise texture over the background. Stops big blurred areas
    from banding and gives the page some texture. Below the content, so text
@@ -254,6 +280,11 @@ a {
   opacity: 0.09;
   background-size: 160px 160px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1.6 -0.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+body.has-avatar-bg .blobs {
+  opacity: 0;
+  transition: opacity 900ms ease;
 }
 
 /* --- Shared glass surface --- */
