@@ -142,9 +142,7 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .blob,
-  .bg-avatar::before,
-  .bg-avatar::after {
+  .blob {
     animation: none;
   }
 
@@ -213,55 +211,13 @@ a {
   position: fixed;
   inset: -15%;
   z-index: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.2);
+  filter: blur(100px) saturate(160%);
   opacity: 0;
   transition: opacity 1200ms ease;
   pointer-events: none;
-}
-
-/* The "wiggle": each layer holds two blurred copies of the pfp (--bg-image,
-   set by main.ts) that slowly rotate, scale and slide against each other on
-   different timings. Where they overlap the colours seem to flow and ripple,
-   so the background looks alive. Each copy is blurred once and then only
-   moved (transform), which keeps it cheap — no per-frame warp filter. */
-.bg-avatar::before,
-.bg-avatar::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: var(--bg-image);
-  background-size: cover;
-  background-position: center;
-  filter: blur(100px) saturate(190%);
-  will-change: transform;
-}
-
-.bg-avatar::before {
-  transform: scale(1.2);
-  animation: bg-wiggle-a 19s ease-in-out infinite alternate;
-}
-
-/* Mirrored and faint, so it adds movement without averaging the pfp's
-   colours together (a strong mirrored copy blends opposite colours into
-   grey and washes the background out). */
-.bg-avatar::after {
-  opacity: 0.32;
-  transform: scale(-1.2, 1.2);
-  animation: bg-wiggle-b 26s ease-in-out infinite alternate;
-  animation-delay: -8s;
-}
-
-@keyframes bg-wiggle-a {
-  0% { transform: translate(0, 0) rotate(0deg) scale(1.2); }
-  33% { transform: translate(3%, -2%) rotate(6deg) scale(1.24); }
-  66% { transform: translate(-3%, 3%) rotate(-5deg) scale(1.18); }
-  100% { transform: translate(2%, 2%) rotate(4deg) scale(1.25); }
-}
-
-@keyframes bg-wiggle-b {
-  0% { transform: translate(0, 0) rotate(0deg) scale(-1.2, 1.2); }
-  33% { transform: translate(-4%, 3%) rotate(-8deg) scale(-1.26, 1.22); }
-  66% { transform: translate(3%, -3%) rotate(6deg) scale(-1.18, 1.26); }
-  100% { transform: translate(-2%, -2%) rotate(-4deg) scale(-1.25, 1.18); }
 }
 
 /* Two layers crossfade: only the active one is visible (see setBackground). */

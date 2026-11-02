@@ -50,7 +50,7 @@ function setBackground(url: string) {
   img.onload = () => {
     if (url !== lastBgUrl) return; // a newer background was requested meanwhile
     const next = 1 - activeBgLayer;
-    bgLayers[next].style.setProperty("--bg-image", `url("${url}")`);
+    bgLayers[next].style.backgroundImage = `url(${url})`;
     bgLayers[next].classList.add("is-active");
     bgLayers[activeBgLayer].classList.remove("is-active");
     activeBgLayer = next;
