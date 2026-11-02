@@ -6,13 +6,15 @@
 //
 //   GET /v1/presence  → { success: true, data: <presence> }   (one-off snapshot)
 //   GET /v1/stream    → Server-Sent Events, an "presence" event on every change
-//   GET /health       → 200 "ok" (for Railway's health check)
+//   GET /health       → 200 "ok"
 //
 // Required env:
 //   DISCORD_BOT_TOKEN  bot token (Developer Portal → Bot → Reset Token)
 //   DISCORD_USER_ID    whose presence to serve
 // Optional env:
-//   PORT               set automatically by Railway
+//   PORT               default 3000
+//   HOST               interface to listen on; default 0.0.0.0. The Google
+//                      Cloud setup uses 127.0.0.1, with Caddy in front for HTTPS.
 
 import http from "node:http";
 import { ActivityType, Client, Events, GatewayIntentBits } from "discord.js";
@@ -20,6 +22,7 @@ import { ActivityType, Client, Events, GatewayIntentBits } from "discord.js";
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const USER_ID = process.env.DISCORD_USER_ID;
 const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || "0.0.0.0";
 
 // Each open tab holds one SSE connection; cap them so a flood of connections
 // can't exhaust the container.
@@ -229,14 +232,14 @@ const server = http.createServer((req, res) => {
   res.writeHead(404).end();
 });
 
-server.listen(PORT, () => console.log(`HTTP listening on :${PORT}`));
+server.listen(PORT, HOST, () => console.log(`HTTP listening on ${HOST}:${PORT}`));
 
 client.login(TOKEN).catch((err) => {
   console.error("Discord login failed:", err.message);
   process.exit(1);
 });
 
-// Railway sends SIGTERM on redeploy.
+// systemd sends SIGTERM on restart/stop.
 process.on("SIGTERM", () => {
   for (const res of streamClients) res.end();
   server.close();
