@@ -231,7 +231,7 @@ a {
   background-image: var(--bg-image);
   background-size: cover;
   background-position: center;
-  filter: blur(100px) saturate(160%);
+  filter: blur(100px) saturate(190%);
   will-change: transform;
 }
 
@@ -240,27 +240,28 @@ a {
   animation: bg-wiggle-a 19s ease-in-out infinite alternate;
 }
 
-/* Mirrored and semi-transparent, so it blends a different arrangement of
-   the same colours over the first copy. */
+/* Mirrored and faint, so it adds movement without averaging the pfp's
+   colours together (a strong mirrored copy blends opposite colours into
+   grey and washes the background out). */
 .bg-avatar::after {
-  opacity: 0.55;
-  transform: scale(-1.3, 1.3);
+  opacity: 0.32;
+  transform: scale(-1.2, 1.2);
   animation: bg-wiggle-b 26s ease-in-out infinite alternate;
   animation-delay: -8s;
 }
 
 @keyframes bg-wiggle-a {
   0% { transform: translate(0, 0) rotate(0deg) scale(1.2); }
-  33% { transform: translate(3%, -2%) rotate(7deg) scale(1.3); }
-  66% { transform: translate(-3%, 3%) rotate(-5deg) scale(1.22); }
-  100% { transform: translate(2%, 2%) rotate(4deg) scale(1.32); }
+  33% { transform: translate(3%, -2%) rotate(6deg) scale(1.24); }
+  66% { transform: translate(-3%, 3%) rotate(-5deg) scale(1.18); }
+  100% { transform: translate(2%, 2%) rotate(4deg) scale(1.25); }
 }
 
 @keyframes bg-wiggle-b {
-  0% { transform: translate(0, 0) rotate(0deg) scale(-1.3, 1.3); }
-  33% { transform: translate(-4%, 3%) rotate(-9deg) scale(-1.4, 1.36); }
-  66% { transform: translate(3%, -3%) rotate(6deg) scale(-1.28, 1.42); }
-  100% { transform: translate(-2%, -2%) rotate(-4deg) scale(-1.38, 1.3); }
+  0% { transform: translate(0, 0) rotate(0deg) scale(-1.2, 1.2); }
+  33% { transform: translate(-4%, 3%) rotate(-8deg) scale(-1.26, 1.22); }
+  66% { transform: translate(3%, -3%) rotate(6deg) scale(-1.18, 1.26); }
+  100% { transform: translate(-2%, -2%) rotate(-4deg) scale(-1.25, 1.18); }
 }
 
 /* Two layers crossfade: only the active one is visible (see setBackground). */
