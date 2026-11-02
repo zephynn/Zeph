@@ -684,6 +684,63 @@ body.is-offline .name {
   border-radius: var(--card-radius);
 }
 
+/* --- Spotify card: takes on the album's colours --- */
+/* The album art, heavily blurred, glowing inside the card (behind the
+   content, under the glass shine and rim). Dimmed or brightened to suit the
+   text colour so the text stays readable over any cover. */
+.activity__ambient {
+  position: absolute;
+  inset: -30%;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(30px) saturate(150%) brightness(1.08);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+body.dark-bg-text .activity__ambient {
+  filter: blur(30px) saturate(150%) brightness(0.72);
+  opacity: 0.55;
+}
+
+.activity--spotify::before,
+.activity--spotify::after {
+  z-index: 1;
+}
+
+/* Edge glow in the album's colour (--accent is set by main.ts). */
+.activity--spotify {
+  box-shadow: var(--glass-shadow), 0 0 32px -10px var(--accent, transparent);
+  transition: box-shadow 600ms ease;
+}
+
+.activity--spotify .activity__bar-fill {
+  background: var(--accent, currentColor);
+}
+
+.activity--spotify .visualiser__bar {
+  background: var(--accent, #1db954);
+}
+
+.activity__art-wrap {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+/* A soft blurred copy of the cover underneath it, like it's lighting the card. */
+.activity__art-glow {
+  position: absolute;
+  inset: 6px 4px -6px;
+  border-radius: calc(var(--card-radius) - var(--card-pad));
+  background-size: cover;
+  background-position: center;
+  filter: blur(14px) saturate(160%);
+  opacity: 0.85;
+}
+
 .activity__art {
   position: relative;
   z-index: 1;
@@ -708,7 +765,7 @@ body.is-offline .name {
 
 .activity__body {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   min-width: 0;
   flex: 1;
   display: flex;

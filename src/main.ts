@@ -13,7 +13,7 @@ import {
 } from "./lib/discord";
 import { watchYoutubeStats, formatCount } from "./lib/youtube";
 import { describeLocalTime } from "./lib/time";
-import { estimateLuminance } from "./lib/color";
+import { estimateLuminance, dominantAccent } from "./lib/color";
 import { animateCount } from "./lib/animate";
 import { fetchViewCount } from "./lib/views";
 
@@ -208,7 +208,33 @@ function buildVisualiser(): HTMLElement {
 
 function buildSpotifyCard(spotify: LanyardSpotify): HTMLElement {
   const card = el("div", "activity activity--spotify");
-  card.appendChild(buildArt([spotify.album_art_url], spotify.song));
+  const art = spotify.album_art_url;
+
+  if (art) {
+    // The album art, heavily blurred, glowing inside the card behind the
+    // glass, so the card takes on the song's colours.
+    const ambient = el("div", "activity__ambient");
+    ambient.setAttribute("aria-hidden", "true");
+    ambient.style.backgroundImage = `url("${art}")`;
+    card.appendChild(ambient);
+
+    // Accent colour (progress bar, equaliser, edge glow) from the album.
+    // If the image can't be read, the defaults (Spotify green) stay.
+    void dominantAccent(art).then((accent) => {
+      if (accent) card.style.setProperty("--accent", accent);
+    });
+  }
+
+  // Cover with a soft blurred copy underneath, like it's lighting the card.
+  const artWrap = el("div", "activity__art-wrap");
+  if (art) {
+    const glow = el("div", "activity__art-glow");
+    glow.setAttribute("aria-hidden", "true");
+    glow.style.backgroundImage = `url("${art}")`;
+    artWrap.appendChild(glow);
+  }
+  artWrap.appendChild(buildArt([art], spotify.song));
+  card.appendChild(artWrap);
 
   const body = el("div", "activity__body");
 
