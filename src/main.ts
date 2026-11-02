@@ -1,4 +1,5 @@
 import "./style.css";
+import "./lib/liquidGlass";
 import { config } from "./config";
 import { LanyardClient, discordAvatarUrl, STATUS_LABEL, type LanyardData, type LanyardActivity } from "./lib/discord";
 import { watchYoutubeStats, formatCount } from "./lib/youtube";

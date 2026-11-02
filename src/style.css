@@ -7,7 +7,20 @@
   --glass-fill-hover: linear-gradient(165deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.38) 100%);
   --glass-border: rgba(255, 255, 255, 0.85);
   --glass-blur: 12px;
-  --glass-saturate: 180%;
+  --glass-saturate: 200%;
+  /* Specular rim: bright where light hits (top-left), faint opposite edge. */
+  --glass-rim: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.25) 30%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(255, 255, 255, 0.2) 75%,
+    rgba(255, 255, 255, 0.7) 100%
+  );
+  /* Used instead of glass when the visitor asks for reduced transparency. */
+  --glass-solid: #fafafa;
+  --glass-solid-border: rgba(24, 24, 27, 0.14);
+  --glass-press: cubic-bezier(0.34, 1.56, 0.64, 1);
   --glass-shadow: 0 10px 30px rgba(24, 24, 27, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.95),
     inset 0 -10px 18px -14px rgba(255, 255, 255, 0.6);
   --glass-shadow-hover: 0 14px 36px rgba(24, 24, 27, 0.14), inset 0 1px 1px rgba(255, 255, 255, 1),
@@ -37,6 +50,16 @@ body.dark-bg-text {
   --glass-fill: linear-gradient(165deg, rgba(24, 24, 27, 0.55) 0%, rgba(24, 24, 27, 0.28) 100%);
   --glass-fill-hover: linear-gradient(165deg, rgba(24, 24, 27, 0.68) 0%, rgba(24, 24, 27, 0.4) 100%);
   --glass-border: rgba(255, 255, 255, 0.22);
+  --glass-rim: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.1) 30%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(255, 255, 255, 0.08) 75%,
+    rgba(255, 255, 255, 0.35) 100%
+  );
+  --glass-solid: #1f1f23;
+  --glass-solid-border: rgba(255, 255, 255, 0.18);
   --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25),
     inset 0 -10px 18px -14px rgba(255, 255, 255, 0.12);
   --glass-shadow-hover: 0 14px 36px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3),
@@ -245,11 +268,106 @@ body.has-avatar-bg .blobs {
 }
 
 .group {
+  position: relative;
   background: linear-gradient(165deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.1) 100%);
   border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 10px 30px rgba(24, 24, 27, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 30px rgba(24, 24, 27, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    inset 0 0 24px -8px rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+/* --- Liquid Glass: specular rim --- */
+/* A 1.5px gradient ring drawn on top of the border (masked to the edge only),
+   so each surface catches light on one corner and fades on the other, which
+   reads as thick, curved glass rather than a flat translucent panel. */
+
+.pill::after,
+.status-bubble::after,
+.row::after,
+.back-link::after,
+.portfolio-card::after,
+.project-detail__link::after,
+.baseplate-cta::after,
+.review-card::after,
+.review-form::after,
+.admin-review::after,
+.footer__pill::after,
+.group::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: var(--glass-rim);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+/* --- Liquid Glass: refraction (Chromium only, see src/lib/liquidGlass.ts) --- */
+/* Only on surfaces that sit directly over the page background. Rows live
+   inside a .group, which is already a backdrop root, so refracting them would
+   only bend the group's own fill — extra cost for no visible effect. */
+
+html.lg-refract .group,
+html.lg-refract .pill,
+html.lg-refract .status-bubble,
+html.lg-refract .back-link,
+html.lg-refract .project-detail__link,
+html.lg-refract .baseplate-cta,
+html.lg-refract .footer__pill {
+  backdrop-filter: blur(var(--glass-blur)) url(#lg-refract) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) url(#lg-refract) saturate(var(--glass-saturate));
+}
+
+/* --- Liquid Glass: accessibility fallback --- */
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .pill,
+  .status-bubble,
+  .row,
+  .back-link,
+  .portfolio-card,
+  .project-detail__link,
+  .baseplate-cta,
+  .review-card,
+  .review-form,
+  .admin-review,
+  .footer__pill,
+  .group {
+    background: var(--glass-solid);
+    border-color: var(--glass-solid-border);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .pill::before,
+  .status-bubble::before,
+  .row::before,
+  .back-link::before,
+  .portfolio-card::before,
+  .project-detail__link::before,
+  .baseplate-cta::before,
+  .review-card::before,
+  .review-form::before,
+  .admin-review::before,
+  .footer__pill::before,
+  .pill::after,
+  .status-bubble::after,
+  .row::after,
+  .back-link::after,
+  .portfolio-card::after,
+  .project-detail__link::after,
+  .baseplate-cta::after,
+  .review-card::after,
+  .review-form::after,
+  .admin-review::after,
+  .footer__pill::after,
+  .group::after {
+    display: none;
+  }
 }
 
 /* --- Layout --- */
@@ -501,7 +619,7 @@ body.has-avatar-bg .blobs {
   padding: 16px 44px;
   border-radius: 999px;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
 }
 
 a.row:hover,
@@ -512,7 +630,8 @@ a.row:focus-visible {
 }
 
 a.row:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
+  transition-duration: 120ms;
 }
 
 .row:focus-visible {
@@ -576,7 +695,7 @@ a.row:active {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
 }
 
 .back-link:hover,
@@ -621,7 +740,7 @@ a.row:active {
   border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
   animation: fade-in-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -760,7 +879,7 @@ a.row:active {
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
 }
 
 .project-detail__link:hover,
@@ -788,7 +907,7 @@ a.row:active {
   font-weight: 700;
   font-size: 18px;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
 }
 
 .baseplate-cta:hover,
@@ -859,7 +978,7 @@ a.review-card--feed {
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
 }
 
 a.review-card--feed:hover,
