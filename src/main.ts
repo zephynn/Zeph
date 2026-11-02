@@ -2,7 +2,7 @@ import "./style.css";
 import "./lib/liquidGlass";
 import { config } from "./config";
 import {
-  LanyardClient,
+  createPresenceSource,
   discordAvatarUrl,
   activityAssetUrl,
   STATUS_LABEL,
@@ -228,9 +228,9 @@ avatarEl.addEventListener("error", () => {
   avatarPlaceholderEl.classList.remove("is-hidden");
 });
 
-const lanyard = new LanyardClient(config.discord.userId);
-lanyard.onUpdate(renderDiscord);
-void lanyard.start();
+const presence = createPresenceSource(config.discord.userId, config.discord.presenceUrl);
+presence.onUpdate(renderDiscord);
+void presence.start();
 
 // --- Pills ---
 

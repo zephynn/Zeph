@@ -1,0 +1,17 @@
+{
+  "name": "zephyn-presence-bot",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Self-hosted replacement for Lanyard: serves zephyn's live Discord presence to the site.",
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "14.28.0"
+  }
+}

@@ -53,6 +53,12 @@ export interface LanyardData {
 
 type Listener = (data: LanyardData) => void;
 
+/** Anything that can feed live presence to the page. */
+export interface PresenceSource {
+  onUpdate(listener: Listener): () => void;
+  start(): void | Promise<void>;
+}
+
 const SOCKET_URL = "wss://api.lanyard.rest/socket";
 const REST_URL = (id: string) => `https://api.lanyard.rest/v1/users/${id}`;
 
@@ -61,7 +67,7 @@ const REST_URL = (id: string) => `https://api.lanyard.rest/v1/users/${id}`;
  * INIT_STATE with subscribe_to_id -> heartbeats). REST is used only as the
  * first-paint fallback if the socket hasn't connected yet or fails outright.
  */
-export class LanyardClient {
+export class LanyardClient implements PresenceSource {
   private ws: WebSocket | null = null;
   private heartbeatTimer: number | undefined;
   private reconnectTimer: number | undefined;
@@ -138,6 +144,53 @@ export class LanyardClient {
   private emit(data: LanyardData) {
     for (const listener of this.listeners) listener(data);
   }
+}
+
+/**
+ * Our own presence bot (presence-bot/, hosted on Railway). Same JSON shape as
+ * Lanyard. Uses Server-Sent Events, which the browser reconnects
+ * automatically, plus one REST call so the first paint doesn't wait for the stream.
+ */
+export class PresenceStreamClient implements PresenceSource {
+  private listeners = new Set<Listener>();
+  private source: EventSource | null = null;
+
+  constructor(private baseUrl: string) {}
+
+  onUpdate(listener: Listener): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  start() {
+    const base = this.baseUrl.replace(/\/+$/, "");
+    void fetch(`${base}/v1/presence`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.success && json.data) this.emit(json.data);
+      })
+      .catch(() => {
+        // the stream will deliver it
+      });
+
+    this.source = new EventSource(`${base}/v1/stream`);
+    this.source.addEventListener("presence", (event) => {
+      try {
+        this.emit(JSON.parse((event as MessageEvent<string>).data) as LanyardData);
+      } catch {
+        // ignore a malformed frame
+      }
+    });
+  }
+
+  private emit(data: LanyardData) {
+    for (const listener of this.listeners) listener(data);
+  }
+}
+
+/** Our bot when its URL is configured, otherwise Lanyard. */
+export function createPresenceSource(userId: string, presenceUrl: string): PresenceSource {
+  return presenceUrl ? new PresenceStreamClient(presenceUrl) : new LanyardClient(userId);
 }
 
 export function discordAvatarUrl(user: LanyardData["discord_user"], size = 128): string {

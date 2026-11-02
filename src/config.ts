@@ -9,6 +9,9 @@ export const config = {
     // Only used for the live Lanyard presence widget in the hero — the
     // "Pages" links group no longer includes a Discord row.
     userId: "1491487646424498357",
+    // Public URL of the self-hosted presence bot (presence-bot/, on Railway),
+    // e.g. "https://zephyn-presence.up.railway.app". Leave empty to use Lanyard.
+    presenceUrl: "",
   },
 
   youtube: {
