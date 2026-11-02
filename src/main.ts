@@ -5,7 +5,6 @@ import {
   LanyardClient,
   discordAvatarUrl,
   activityAssetUrl,
-  fetchDiscordBanner,
   STATUS_LABEL,
   type LanyardData,
   type LanyardActivity,
@@ -33,33 +32,21 @@ const statusDotEl = document.getElementById("status-dot")!;
 const statusBubbleEl = document.getElementById("status-bubble")!;
 const activitiesEl = document.getElementById("activities")!;
 
-// --- Background: Discord banner if there is one, otherwise blurred avatar ---
+// --- Background: blurred avatar ---
 
-// Started immediately so it's usually resolved by the time Lanyard answers,
-// which avoids flashing the avatar background before swapping to the banner.
-const bannerPromise = fetchDiscordBanner();
 let lastBgUrl = "";
 
-function setBackground(url: string, kind: "banner" | "avatar") {
+function renderBackground(user: LanyardData["discord_user"]) {
+  // Larger source for the background blur — blur washes out detail anyway,
+  // so a bigger fetch just avoids visible pixelation/banding once scaled up.
+  const url = discordAvatarUrl(user, 512);
   if (url === lastBgUrl) return;
   lastBgUrl = url;
   bgAvatarEl.style.backgroundImage = `url(${url})`;
   document.body.classList.add("has-avatar-bg");
-  document.body.classList.toggle("has-banner-bg", kind === "banner");
   void estimateLuminance(url).then((luminance) => {
     document.body.classList.toggle("dark-bg-text", luminance < 0.45);
   });
-}
-
-async function renderBackground(user: LanyardData["discord_user"]) {
-  const bannerUrl = await bannerPromise;
-  if (bannerUrl) {
-    setBackground(bannerUrl, "banner");
-  } else {
-    // Larger source for the background blur — blur washes out detail anyway,
-    // so a bigger fetch just avoids visible pixelation/banding once scaled up.
-    setBackground(discordAvatarUrl(user, 512), "avatar");
-  }
 }
 
 // --- Custom status bubble (the "speech bubble" next to the avatar) ---
@@ -226,7 +213,7 @@ function renderDiscord(data: LanyardData) {
   avatarEl.classList.remove("is-hidden");
   avatarPlaceholderEl.classList.add("is-hidden");
 
-  void renderBackground(data.discord_user);
+  renderBackground(data.discord_user);
 
   statusDotEl.dataset.status = data.discord_status;
   statusDotEl.setAttribute("aria-label", `Discord status: ${STATUS_LABEL[data.discord_status]}`);

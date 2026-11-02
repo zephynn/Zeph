@@ -170,15 +170,3 @@ export function activityAssetUrl(activity: LanyardActivity, key: string | undefi
   }
   return null;
 }
-
-/** Banner URL from /api/discord-banner, or null (no banner / not configured / error). */
-export async function fetchDiscordBanner(): Promise<string | null> {
-  try {
-    const res = await fetch("/api/discord-banner");
-    if (!res.ok) return null;
-    const json = await res.json();
-    return typeof json.bannerUrl === "string" ? json.bannerUrl : null;
-  } catch {
-    return null;
-  }
-}

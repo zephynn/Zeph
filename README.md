@@ -32,7 +32,6 @@ is intentional, not an oversight.
 ```
 api/youtube.ts                 YouTube subscriber count proxy
 api/views.ts                    View counter (Redis-backed)
-api/discord-banner.ts           Discord profile banner lookup (needs DISCORD_BOT_TOKEN; optional)
 api/reviews/submit.ts            Public: submit a review (honeypot + per-IP rate limit)
 api/reviews/list.ts               Public: list approved reviews, optional ?projectId=
 api/reviews/admin-data.ts          Password-gated: every review + read-only view count

@@ -213,14 +213,6 @@ body.has-avatar-bg .bg-avatar {
   opacity: 1;
 }
 
-/* A banner is meant to be seen, so it gets a much lighter blur than the avatar
-   (just enough to hide upscaling on big screens). */
-body.has-banner-bg .bg-avatar {
-  inset: -2%;
-  transform: scale(1.04);
-  filter: blur(14px) saturate(120%);
-}
-
 body.has-avatar-bg .blobs {
   opacity: 0;
   transition: opacity 900ms ease;
