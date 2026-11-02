@@ -214,13 +214,6 @@ function buildSpotifyCard(spotify: LanyardSpotify): HTMLElement {
   const art = spotify.album_art_url;
 
   if (art) {
-    // The album art, heavily blurred, glowing inside the card behind the
-    // glass, so the card takes on the song's colours.
-    const ambient = el("div", "activity__ambient");
-    ambient.setAttribute("aria-hidden", "true");
-    ambient.style.backgroundImage = `url("${art}")`;
-    card.appendChild(ambient);
-
     // Accent colour (progress bar, equaliser, edge glow) from the album.
     // If the image can't be read, the defaults (Spotify green) stay.
     void dominantAccent(art).then((accent) => {

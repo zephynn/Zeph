@@ -684,25 +684,9 @@ body.is-offline .name {
   border-radius: var(--card-radius);
 }
 
-/* --- Spotify card: takes on the album's colours --- */
-/* The album art, heavily blurred, glowing inside the card (behind the
-   content, under the glass shine and rim). Dimmed or brightened to suit the
-   text colour so the text stays readable over any cover. */
-.activity__ambient {
-  position: absolute;
-  inset: -30%;
-  z-index: 0;
-  background-size: cover;
-  background-position: center;
-  filter: blur(30px) saturate(150%) brightness(1.08);
-  opacity: 0.45;
-  pointer-events: none;
-}
-
-body.dark-bg-text .activity__ambient {
-  filter: blur(30px) saturate(150%) brightness(0.72);
-  opacity: 0.55;
-}
+/* --- Spotify card: album-coloured accents --- */
+/* (No album glow inside the card: the page background already becomes the
+   album art while Spotify plays, so it would just repeat it.) */
 
 .activity--spotify::before,
 .activity--spotify::after {
