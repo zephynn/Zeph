@@ -33,9 +33,9 @@ const statusDotEl = document.getElementById("status-dot")!;
 const statusBubbleEl = document.getElementById("status-bubble")!;
 const activitiesEl = document.getElementById("activities")!;
 
-// --- Background: album art while Spotify is playing, otherwise the pfp ---
+// --- Background: blurred pfp ---
 // Two stacked layers: the new image loads into the hidden one, then they
-// swap opacity, so the page fades between backgrounds instead of jumping.
+// swap opacity, so changing your pfp fades instead of jumping.
 
 const bgLayers = [bgAvatarEl, document.getElementById("bg-avatar-2")!];
 let activeBgLayer = 0;
@@ -63,11 +63,10 @@ function setBackground(url: string) {
   });
 }
 
-function renderBackground(data: LanyardData) {
-  const albumArt = data.listening_to_spotify ? data.spotify?.album_art_url : null;
+function renderBackground(user: LanyardData["discord_user"]) {
   // Larger pfp source for the background blur — blur washes out detail
   // anyway, so a bigger fetch just avoids visible banding once scaled up.
-  setBackground(albumArt || discordAvatarUrl(data.discord_user, 512));
+  setBackground(discordAvatarUrl(user, 512));
 }
 
 // --- Avatar decoration ---
@@ -254,7 +253,7 @@ function renderDiscord(data: LanyardData) {
   avatarEl.classList.remove("is-hidden");
   avatarPlaceholderEl.classList.add("is-hidden");
 
-  renderBackground(data);
+  renderBackground(data.discord_user);
   renderDecoration(data.discord_user);
 
   statusDotEl.dataset.status = data.discord_status;

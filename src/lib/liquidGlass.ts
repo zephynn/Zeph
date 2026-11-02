@@ -98,14 +98,17 @@ export function initLiquidGlass(): void {
 //
 // Sets --lx/--ly on each glass surface to the cursor position inside it
 // (style.css turns that into a sliding highlight and a brighter rim), and
-// tilts the main card slightly toward the cursor. Work is batched to one
+// drifts the socials card and activity cards slightly toward the cursor. Work is batched to one
 // update per animation frame, and only surfaces near the cursor are touched.
 
 const SURFACES =
   ".pill, .status-bubble, .row, .back-link, .portfolio-card, .project-detail__link, " +
   ".baseplate-cta, .review-card, .review-form, .admin-review, .footer__pill, .activity, .group";
 const NEAR_PX = 260; // only update surfaces within this distance of the cursor
-const MAX_TILT_DEG = 3;
+// A small 2D drift, not a 3D tilt: Chrome renders backdrop blur wrongly
+// inside 3D-transformed elements (hard-edged rectangles in the glass).
+const MAX_DRIFT_PX = 3;
+const DRIFTING = ".groups, .activities";
 
 export function initGlassPointer(): void {
   if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
@@ -151,13 +154,15 @@ export function initGlassPointer(): void {
     lit.clear();
     for (const el of nowLit) lit.add(el);
 
-    const card = document.querySelector<HTMLElement>(".groups");
-    if (card && !reducedMotion.matches) {
-      const r = card.getBoundingClientRect();
-      const dx = Math.max(-1, Math.min(1, (pointerX - (r.left + r.width / 2)) / (r.width / 2 + 200)));
-      const dy = Math.max(-1, Math.min(1, (pointerY - (r.top + r.height / 2)) / (r.height / 2 + 200)));
-      card.style.setProperty("--tilt-y", `${(dx * MAX_TILT_DEG).toFixed(2)}deg`);
-      card.style.setProperty("--tilt-x", `${(-dy * MAX_TILT_DEG).toFixed(2)}deg`);
+    if (!reducedMotion.matches) {
+      for (const card of document.querySelectorAll<HTMLElement>(DRIFTING)) {
+        const r = card.getBoundingClientRect();
+        if (r.width === 0) continue; // hidden (e.g. no activities)
+        const dx = Math.max(-1, Math.min(1, (pointerX - (r.left + r.width / 2)) / (r.width / 2 + 200)));
+        const dy = Math.max(-1, Math.min(1, (pointerY - (r.top + r.height / 2)) / (r.height / 2 + 200)));
+        card.style.setProperty("--drift-x", `${(dx * MAX_DRIFT_PX).toFixed(2)}px`);
+        card.style.setProperty("--drift-y", `${(dy * MAX_DRIFT_PX).toFixed(2)}px`);
+      }
     }
   }
 
@@ -182,9 +187,10 @@ export function initGlassPointer(): void {
       el.style.removeProperty("--ly");
     }
     lit.clear();
-    const card = document.querySelector<HTMLElement>(".groups");
-    card?.style.removeProperty("--tilt-x");
-    card?.style.removeProperty("--tilt-y");
+    for (const card of document.querySelectorAll<HTMLElement>(DRIFTING)) {
+      card.style.removeProperty("--drift-x");
+      card.style.removeProperty("--drift-y");
+    }
   });
 }
 
