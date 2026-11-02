@@ -1754,13 +1754,19 @@ a.review-card--feed:focus-visible {
   .content {
     flex: 1;
     justify-content: center;
+    align-items: center;
     padding-top: 40px;
     padding-bottom: 40px;
+    /* Room for the zoomed column below (432px × 1.18 ≈ 510px, plus gutters). */
+    max-width: 620px;
   }
 
   .content__center {
-    width: 100%;
-    max-width: 480px;
+    /* A fixed width, not 100%: percentage widths don't grow with `zoom`, so
+       the column would stay at its normal width while everything inside it
+       got bigger — a squashed, skinny layout. 432px is the normal column
+       width (480px minus the 24px gutters); zoomed it becomes ≈510px. */
+    width: 432px;
     /* zoom, not transform: scale(). A transform here makes Chrome draw the
        glass blur in the wrong place once the cards tilt in 3D. */
     zoom: 1.18;
