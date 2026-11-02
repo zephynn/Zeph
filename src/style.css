@@ -184,6 +184,11 @@ a {
     transition: none;
   }
 
+  .visualiser__bar {
+    animation: none;
+    transform: scaleY(0.6);
+  }
+
   a.row:active,
   .back-link:active,
   .portfolio-card:active,
@@ -640,14 +645,14 @@ body.is-offline .name {
 /* --- Live Discord activities --- */
 
 .activities {
-  /* Same gentle cursor drift as the socials card (see liquidGlass.ts). */
-  transform: translate(var(--drift-x, 0px), var(--drift-y, 0px));
+  /* Same gentle cursor tilt as the socials card (see liquidGlass.ts). */
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
   transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 24px;
-  /* Animates `translate`, not `transform`, so it doesn't fight the drift. */
+  gap: 12px;
+  margin-top: 28px;
+  /* Animates `translate`, not `transform`, so it doesn't fight the tilt. */
   animation: fade-in-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -666,43 +671,29 @@ body.is-offline .name {
   display: none;
 }
 
+/* Same corner radius as the socials card, so every card-level surface
+   matches; the artwork's radius is the card radius minus the padding, so the
+   corners stay concentric. */
 .activity {
+  --card-radius: 36px;
+  --card-pad: 16px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 16px 12px 12px;
-  border-radius: 24px;
-}
-
-a.activity {
-  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
-}
-
-a.activity:hover,
-a.activity:focus-visible {
-  background: var(--glass-fill-hover);
-  box-shadow: var(--glass-shadow-hover);
-}
-
-a.activity:active {
-  transform: scale(0.97);
-  transition-duration: 120ms;
-}
-
-a.activity:focus-visible {
-  outline: 2px solid var(--fg-muted);
-  outline-offset: 2px;
+  gap: 16px;
+  padding: var(--card-pad);
+  border-radius: var(--card-radius);
 }
 
 .activity__art {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
-  width: 64px;
-  height: 64px;
-  border-radius: 14px;
+  align-self: flex-start;
+  width: 76px;
+  height: 76px;
+  border-radius: calc(var(--card-radius) - var(--card-pad));
   object-fit: cover;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .activity__art--placeholder {
@@ -710,7 +701,7 @@ a.activity:focus-visible {
   place-items: center;
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 24px;
+  font-size: 28px;
   color: #fff;
   background: linear-gradient(135deg, #a1a1aa, #52525b);
 }
@@ -720,6 +711,9 @@ a.activity:focus-visible {
   z-index: 1;
   min-width: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .activity__body p {
@@ -730,42 +724,69 @@ a.activity:focus-visible {
 }
 
 .activity__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 2px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 0.7;
+}
+
+.activity__label,
+.activity__line {
+  opacity: 0.75;
+}
+
+.activity__label-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
 }
 
 .activity__title {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 1.3;
 }
 
 .activity__line {
   font-size: 13px;
-  opacity: 0.8;
 }
+
+.activity__body .activity__elapsed {
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}
+
+/* --- Spotify progress --- */
 
 .activity__progress {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .activity__time {
+  min-width: 28px;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  opacity: 0.75;
+  opacity: 0.7;
+}
+
+.activity__time:last-child {
+  text-align: right;
 }
 
 .activity__bar {
   flex: 1;
   height: 4px;
   border-radius: 999px;
-  background: rgba(127, 127, 127, 0.3);
+  background: rgba(127, 127, 127, 0.28);
   overflow: hidden;
 }
 
@@ -775,6 +796,90 @@ a.activity:focus-visible {
   border-radius: inherit;
   background: currentColor;
   transition: width 1s linear;
+}
+
+/* --- "Listen on Spotify" button: a small glass pill --- */
+
+.activity__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 12px;
+  padding: 7px 14px 7px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  transition: background-color 200ms ease, transform 320ms var(--glass-press);
+}
+
+.activity__action:hover,
+.activity__action:focus-visible {
+  background: var(--glass-fill-hover);
+}
+
+.activity__action:active {
+  transform: scale(0.95);
+  transition-duration: 120ms;
+}
+
+.activity__action:focus-visible {
+  outline: 2px solid var(--fg-muted);
+  outline-offset: 2px;
+}
+
+.activity__action-icon {
+  width: 14px;
+  height: 14px;
+  color: #1db954;
+}
+
+/* --- Equaliser bars (decorative "now playing" indicator) --- */
+/* Spotify doesn't expose the audio, so these don't follow the actual song. */
+
+.visualiser {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+  margin-left: 2px;
+}
+
+.visualiser__bar {
+  width: 2.5px;
+  height: 100%;
+  border-radius: 2px;
+  background: #1db954;
+  transform-origin: bottom;
+  animation: visualiser-bounce 900ms ease-in-out infinite alternate;
+}
+
+.visualiser__bar:nth-child(2) {
+  animation-duration: 650ms;
+  animation-delay: -200ms;
+}
+.visualiser__bar:nth-child(3) {
+  animation-duration: 1100ms;
+  animation-delay: -450ms;
+}
+.visualiser__bar:nth-child(4) {
+  animation-duration: 780ms;
+  animation-delay: -100ms;
+}
+
+@keyframes visualiser-bounce {
+  0% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0.45);
+  }
 }
 
 .pill-row {
@@ -815,11 +920,10 @@ a.activity:focus-visible {
 .groups {
   position: relative;
   width: 100%;
-  /* Drifts a few px toward the cursor (set by liquidGlass.ts; desktop only).
-     Deliberately 2D: Chrome renders backdrop blur wrongly inside 3D transforms. */
-  transform: translate(var(--drift-x, 0px), var(--drift-y, 0px));
+  /* Tilts slightly toward the cursor (set by liquidGlass.ts; desktop only). */
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
   transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
-  margin-top: 40px;
+  margin-top: 28px;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -1657,7 +1761,9 @@ a.review-card--feed:focus-visible {
   .content__center {
     width: 100%;
     max-width: 480px;
-    transform: scale(1.18);
+    /* zoom, not transform: scale(). A transform here makes Chrome draw the
+       glass blur in the wrong place once the cards tilt in 3D. */
+    zoom: 1.18;
   }
 
   .bottom-row {

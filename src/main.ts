@@ -122,6 +122,10 @@ const ACTIVITY_VERB: Record<number, string> = {
   5: "Competing in",
 };
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+const SPOTIFY_PATH =
+  "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.62.62 0 0 1-.86.2c-2.35-1.43-5.3-1.76-8.79-.96a.62.62 0 1 1-.28-1.21c3.81-.87 7.08-.5 9.72 1.11.3.18.39.57.21.86Zm1.22-2.72a.78.78 0 0 1-1.07.26c-2.69-1.65-6.79-2.13-9.97-1.17a.78.78 0 1 1-.45-1.49c3.63-1.1 8.15-.57 11.23 1.33.37.22.48.7.26 1.07Zm.1-2.83C14.7 8.94 9.37 8.76 6.3 9.7a.94.94 0 1 1-.54-1.8c3.53-1.07 9.4-.86 13.1 1.33a.94.94 0 0 1-.95 1.62Z";
+
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text?: string) {
   const node = document.createElement(tag);
   node.className = className;
@@ -129,7 +133,20 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
   return node;
 }
 
-function formatDuration(ms: number): string {
+function spotifyIcon(className: string): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("class", className);
+  const path = document.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", SPOTIFY_PATH);
+  path.setAttribute("fill", "currentColor");
+  svg.appendChild(path);
+  return svg;
+}
+
+/** Track position, e.g. "3:07" or "1:02:45". */
+function formatClock(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
@@ -138,58 +155,99 @@ function formatDuration(ms: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/** How long an activity has run, e.g. "for 12m" or "for 1h 6m". */
+function formatElapsed(ms: number): string {
+  const minutes = Math.floor(Math.max(0, ms) / 60_000);
+  if (minutes < 1) return "just started";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `for ${m}m`;
+  return m === 0 ? `for ${h}h` : `for ${h}h ${m}m`;
+}
+
 /** Elements whose text/width depends on the current time, refreshed every second. */
 interface LiveTimer {
   update: (now: number) => void;
 }
 let liveTimers: LiveTimer[] = [];
 
-function buildArt(url: string | null, fallbackLetter: string): HTMLElement {
-  if (!url) {
-    const placeholder = el("div", "activity__art activity__art--placeholder", fallbackLetter.slice(0, 1).toUpperCase());
-    placeholder.setAttribute("aria-hidden", "true");
-    return placeholder;
-  }
+/**
+ * Artwork with fallbacks: tries each URL in turn (e.g. the activity's own
+ * image, then the app's icon), and ends on a lettered tile if none load.
+ */
+function buildArt(urls: (string | null | undefined)[], fallbackLetter: string): HTMLElement {
+  const candidates = urls.filter((u): u is string => Boolean(u));
+  const placeholder = () => {
+    const tile = el("div", "activity__art activity__art--placeholder", fallbackLetter.slice(0, 1).toUpperCase());
+    tile.setAttribute("aria-hidden", "true");
+    return tile;
+  };
+  if (candidates.length === 0) return placeholder();
+
   const img = el("img", "activity__art");
-  img.src = url;
   img.alt = "";
-  img.loading = "lazy";
-  img.addEventListener("error", () => img.replaceWith(buildArt(null, fallbackLetter)));
+  img.decoding = "async";
+  let index = 0;
+  img.addEventListener("error", () => {
+    index += 1;
+    if (index < candidates.length) img.src = candidates[index];
+    else img.replaceWith(placeholder());
+  });
+  img.src = candidates[0];
   return img;
 }
 
-function buildSpotifyCard(spotify: LanyardSpotify): HTMLElement {
-  const card = el(spotify.track_id ? "a" : "div", "activity activity--spotify");
-  if (card instanceof HTMLAnchorElement && spotify.track_id) {
-    card.href = `https://open.spotify.com/track/${spotify.track_id}`;
-    card.target = "_blank";
-    card.rel = "noopener noreferrer";
-  }
+/** Decorative equaliser bars. Spotify doesn't expose the audio, so this isn't
+ *  reacting to the actual song — it's a "something's playing" indicator. */
+function buildVisualiser(): HTMLElement {
+  const bars = el("span", "visualiser");
+  bars.setAttribute("aria-hidden", "true");
+  for (let i = 0; i < 4; i++) bars.appendChild(el("span", "visualiser__bar"));
+  return bars;
+}
 
-  card.appendChild(buildArt(spotify.album_art_url, spotify.song));
+function buildSpotifyCard(spotify: LanyardSpotify): HTMLElement {
+  const card = el("div", "activity activity--spotify");
+  card.appendChild(buildArt([spotify.album_art_url], spotify.song));
 
   const body = el("div", "activity__body");
-  body.appendChild(el("p", "activity__label", "Listening on Spotify"));
+
+  const label = el("p", "activity__label");
+  label.append(spotifyIcon("activity__label-icon"), "Listening on Spotify", buildVisualiser());
+  body.appendChild(label);
+
   body.appendChild(el("p", "activity__title", spotify.song));
-  body.appendChild(el("p", "activity__line", spotify.artist.split(";").join(",")));
+  const artist = spotify.artist.split(";").join(",");
+  const byline = spotify.album && spotify.album !== spotify.song ? `${artist} · ${spotify.album}` : artist;
+  body.appendChild(el("p", "activity__line", byline));
 
   const { start, end } = spotify.timestamps;
+  const length = Math.max(end - start, 1);
   const progress = el("div", "activity__progress");
   const bar = el("div", "activity__bar");
   const fill = el("div", "activity__bar-fill");
   bar.appendChild(fill);
   const elapsed = el("span", "activity__time");
-  const total = el("span", "activity__time", formatDuration(end - start));
+  const total = el("span", "activity__time", formatClock(length));
   progress.append(elapsed, bar, total);
   body.appendChild(progress);
 
   liveTimers.push({
     update(now) {
-      const clamped = Math.min(Math.max(now - start, 0), end - start);
-      elapsed.textContent = formatDuration(clamped);
-      fill.style.width = `${(clamped / (end - start)) * 100}%`;
+      const position = Math.min(Math.max(now - start, 0), length);
+      elapsed.textContent = formatClock(position);
+      fill.style.width = `${(position / length) * 100}%`;
     },
   });
+
+  if (spotify.track_id) {
+    const listen = el("a", "activity__action");
+    listen.href = `https://open.spotify.com/track/${spotify.track_id}`;
+    listen.target = "_blank";
+    listen.rel = "noopener noreferrer";
+    listen.append(spotifyIcon("activity__action-icon"), "Listen on Spotify");
+    body.appendChild(listen);
+  }
 
   card.appendChild(body);
   return card;
@@ -197,7 +255,8 @@ function buildSpotifyCard(spotify: LanyardSpotify): HTMLElement {
 
 function buildActivityCard(activity: LanyardActivity): HTMLElement {
   const card = el("div", "activity");
-  card.appendChild(buildArt(activityAssetUrl(activity, activity.assets?.large_image), activity.name));
+  const appIcon = activity.application_id ? `/api/app-icon?id=${activity.application_id}` : null;
+  card.appendChild(buildArt([activityAssetUrl(activity, activity.assets?.large_image), appIcon], activity.name));
 
   const body = el("div", "activity__body");
   body.appendChild(el("p", "activity__label", ACTIVITY_VERB[activity.type] ?? "Using"));
@@ -211,7 +270,7 @@ function buildActivityCard(activity: LanyardActivity): HTMLElement {
     body.appendChild(time);
     liveTimers.push({
       update(now) {
-        time.textContent = `${formatDuration(now - start)} elapsed`;
+        time.textContent = formatElapsed(now - start);
       },
     });
   }
@@ -220,21 +279,28 @@ function buildActivityCard(activity: LanyardActivity): HTMLElement {
   return card;
 }
 
+// Discord re-sends presence for unrelated reasons (status changes, other
+// fields). Rebuilding identical cards would reload their images and blink,
+// so only rebuild when the activity content actually changed.
+let lastActivitiesKey = "";
+
 function renderActivities(data: LanyardData) {
+  const spotify = data.listening_to_spotify ? data.spotify : null;
+  const others = data.activities.filter(
+    (a) => a.type !== 4 && !(a.type === 2 && a.name === "Spotify"), // custom status → bubble; Spotify → its own card
+  );
+
+  const key = JSON.stringify([spotify, others]);
+  if (key === lastActivitiesKey) return;
+  lastActivitiesKey = key;
+
   liveTimers = [];
-  activitiesEl.replaceChildren();
-
   const cards: HTMLElement[] = [];
-  if (data.listening_to_spotify && data.spotify) cards.push(buildSpotifyCard(data.spotify));
-
-  for (const activity of data.activities) {
-    if (activity.type === 4) continue; // custom status → status bubble
-    if (activity.type === 2 && activity.name === "Spotify") continue; // covered by the Spotify card
-    cards.push(buildActivityCard(activity));
-  }
+  if (spotify) cards.push(buildSpotifyCard(spotify));
+  for (const activity of others) cards.push(buildActivityCard(activity));
 
   // Cap it so the profile doesn't turn into a wall of cards.
-  activitiesEl.append(...cards.slice(0, 2));
+  activitiesEl.replaceChildren(...cards.slice(0, 2));
   activitiesEl.hidden = cards.length === 0;
   tickTimers();
 }
