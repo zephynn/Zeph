@@ -1,4 +1,5 @@
 import "./style.css";
+import "./lib/liquidGlass";
 import type { Project } from "./lib/portfolio";
 import { fetchPortfolio } from "./lib/portfolio";
 import {

@@ -5,6 +5,10 @@ export interface LanyardActivity {
   state?: string;
   details?: string;
   application_id?: string;
+  timestamps?: {
+    start?: number;
+    end?: number;
+  };
   assets?: {
     large_image?: string;
     large_text?: string;
@@ -21,6 +25,15 @@ export interface LanyardActivity {
   };
 }
 
+export interface LanyardSpotify {
+  track_id: string | null;
+  song: string;
+  artist: string;
+  album: string;
+  album_art_url: string | null;
+  timestamps: { start: number; end: number };
+}
+
 export interface LanyardData {
   discord_user: {
     id: string;
@@ -28,15 +41,28 @@ export interface LanyardData {
     global_name?: string | null;
     discriminator: string;
     avatar: string | null;
+    avatar_decoration_data?: {
+      asset: string;
+      sku_id?: string;
+      expires_at?: number | null;
+    } | null;
   };
   discord_status: "online" | "idle" | "dnd" | "offline";
   activities: LanyardActivity[];
+  listening_to_spotify?: boolean;
+  spotify?: LanyardSpotify | null;
   active_on_discord_mobile: boolean;
   active_on_discord_desktop: boolean;
   active_on_discord_web: boolean;
 }
 
 type Listener = (data: LanyardData) => void;
+
+/** Anything that can feed live presence to the page. */
+export interface PresenceSource {
+  onUpdate(listener: Listener): () => void;
+  start(): void | Promise<void>;
+}
 
 const SOCKET_URL = "wss://api.lanyard.rest/socket";
 const REST_URL = (id: string) => `https://api.lanyard.rest/v1/users/${id}`;
@@ -46,7 +72,7 @@ const REST_URL = (id: string) => `https://api.lanyard.rest/v1/users/${id}`;
  * INIT_STATE with subscribe_to_id -> heartbeats). REST is used only as the
  * first-paint fallback if the socket hasn't connected yet or fails outright.
  */
-export class LanyardClient {
+export class LanyardClient implements PresenceSource {
   private ws: WebSocket | null = null;
   private heartbeatTimer: number | undefined;
   private reconnectTimer: number | undefined;
@@ -125,6 +151,53 @@ export class LanyardClient {
   }
 }
 
+/**
+ * Our own presence bot (presence-bot/, hosted on Railway). Same JSON shape as
+ * Lanyard. Uses Server-Sent Events, which the browser reconnects
+ * automatically, plus one REST call so the first paint doesn't wait for the stream.
+ */
+export class PresenceStreamClient implements PresenceSource {
+  private listeners = new Set<Listener>();
+  private source: EventSource | null = null;
+
+  constructor(private baseUrl: string) {}
+
+  onUpdate(listener: Listener): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  start() {
+    const base = this.baseUrl.replace(/\/+$/, "");
+    void fetch(`${base}/v1/presence`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.success && json.data) this.emit(json.data);
+      })
+      .catch(() => {
+        // the stream will deliver it
+      });
+
+    this.source = new EventSource(`${base}/v1/stream`);
+    this.source.addEventListener("presence", (event) => {
+      try {
+        this.emit(JSON.parse((event as MessageEvent<string>).data) as LanyardData);
+      } catch {
+        // ignore a malformed frame
+      }
+    });
+  }
+
+  private emit(data: LanyardData) {
+    for (const listener of this.listeners) listener(data);
+  }
+}
+
+/** Our bot when its URL is configured, otherwise Lanyard. */
+export function createPresenceSource(userId: string, presenceUrl: string): PresenceSource {
+  return presenceUrl ? new PresenceStreamClient(presenceUrl) : new LanyardClient(userId);
+}
+
 export function discordAvatarUrl(user: LanyardData["discord_user"], size = 128): string {
   if (!user.avatar) {
     const fallbackIndex = Number(BigInt(user.id) >> 22n) % 6;
@@ -140,3 +213,29 @@ export const STATUS_LABEL: Record<LanyardData["discord_status"], string> = {
   dnd: "Do Not Disturb",
   offline: "Offline",
 };
+
+/**
+ * Resolves a Rich Presence asset key to an image URL. Discord sends three
+ * shapes: "mp:external/..." (proxied external image), "spotify:<id>" (album
+ * art), or a plain numeric id that belongs to the activity's application.
+ */
+export function activityAssetUrl(activity: LanyardActivity, key: string | undefined): string | null {
+  if (!key) return null;
+  if (key.startsWith("mp:")) return `https://media.discordapp.net/${key.slice(3)}`;
+  if (key.startsWith("spotify:")) return `https://i.scdn.co/image/${key.slice(8)}`;
+  if (activity.application_id && /^\d+$/.test(key)) {
+    return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${key}.png`;
+  }
+  return null;
+}
+
+/**
+ * Animated avatar decoration (the frame around the pfp). Discord draws it at
+ * 1.2x the avatar size. `passthrough=true` keeps the APNG animation; false
+ * gives the first frame only (used for reduced motion).
+ */
+export function avatarDecorationUrl(user: LanyardData["discord_user"], animated: boolean): string | null {
+  const asset = user.avatar_decoration_data?.asset;
+  if (!asset) return null;
+  return `https://cdn.discordapp.com/avatar-decoration-presets/${asset}.png?size=240&passthrough=${animated}`;
+}

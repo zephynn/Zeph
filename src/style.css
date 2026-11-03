@@ -3,15 +3,31 @@
   --fg: #18181b;
   --fg-muted: #18181b;
 
-  --glass-fill: linear-gradient(165deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.22) 100%);
-  --glass-fill-hover: linear-gradient(165deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.38) 100%);
-  --glass-border: rgba(255, 255, 255, 0.85);
-  --glass-blur: 12px;
-  --glass-saturate: 180%;
-  --glass-shadow: 0 10px 30px rgba(24, 24, 27, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.95),
-    inset 0 -10px 18px -14px rgba(255, 255, 255, 0.6);
-  --glass-shadow-hover: 0 14px 36px rgba(24, 24, 27, 0.14), inset 0 1px 1px rgba(255, 255, 255, 1),
-    inset 0 -10px 18px -14px rgba(255, 255, 255, 0.7);
+  /* One clear glass everywhere — no light/dark tint variants. The surface is
+     almost fully transparent; what makes it read as glass is the blur, the
+     refraction, the bright rim and the soft shadow, not a coloured fill. */
+  --glass-fill: linear-gradient(165deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%);
+  --glass-fill-hover: linear-gradient(165deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --glass-blur: 10px;
+  --glass-saturate: 200%;
+  /* Specular rim: bright where light hits (top-left), faint opposite edge. */
+  --glass-rim: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.25) 30%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(255, 255, 255, 0.2) 75%,
+    rgba(255, 255, 255, 0.7) 100%
+  );
+  /* Used instead of glass when the visitor asks for reduced transparency. */
+  --glass-solid: #fafafa;
+  --glass-solid-border: rgba(24, 24, 27, 0.14);
+  --glass-press: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --glass-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 0 16px -6px rgba(255, 255, 255, 0.35);
+  --glass-shadow-hover: 0 12px 30px rgba(0, 0, 0, 0.16), inset 0 1px 1px rgba(255, 255, 255, 0.75),
+    inset 0 0 18px -6px rgba(255, 255, 255, 0.45);
 
   --blob-a: #e4e4e7;
   --blob-b: #ffffff;
@@ -30,25 +46,18 @@
   --font-body: "DM Sans", sans-serif;
 }
 
-/* Flipped automatically when the avatar's average brightness is low, so
-   text/glass stay legible against a dark or heavily saturated pfp. */
+/* Flipped automatically when the avatar's average brightness is low. Only
+   the text colour changes — the glass itself stays the same clear glass. */
 body.dark-bg-text {
+  /* Clear glass doesn't hide bright patches of the background, so light text
+     gets a faint shadow to stay readable over them. */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
   --fg: #f4f4f5;
   --fg-muted: #f4f4f5;
-
-  --glass-fill: linear-gradient(165deg, rgba(24, 24, 27, 0.55) 0%, rgba(24, 24, 27, 0.28) 100%);
-  --glass-fill-hover: linear-gradient(165deg, rgba(24, 24, 27, 0.68) 0%, rgba(24, 24, 27, 0.4) 100%);
-  --glass-border: rgba(255, 255, 255, 0.22);
-  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25),
-    inset 0 -10px 18px -14px rgba(255, 255, 255, 0.12);
-  --glass-shadow-hover: 0 14px 36px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3),
-    inset 0 -10px 18px -14px rgba(255, 255, 255, 0.16);
+  /* Reduced-transparency fallback only: a dark solid so light text stays readable. */
+  --glass-solid: #1f1f23;
+  --glass-solid-border: rgba(255, 255, 255, 0.18);
   --sheet-fill: linear-gradient(165deg, rgba(24, 18, 20, 0.88) 0%, rgba(24, 18, 20, 0.76) 100%);
-}
-
-body.dark-bg-text .group {
-  background: linear-gradient(165deg, rgba(24, 24, 27, 0.3) 0%, rgba(24, 24, 27, 0.12) 100%);
-  border-color: rgba(255, 255, 255, 0.16);
 }
 
 * {
@@ -168,8 +177,25 @@ a {
     display: none;
   }
 
-  .avatar {
+  .avatar,
+  .name,
+  .activity__bar-fill {
     transition: none;
+  }
+
+  .activities {
+    animation: none;
+  }
+
+  .groups,
+  .activities {
+    transform: none;
+    transition: none;
+  }
+
+  .visualiser__bar {
+    animation: none;
+    transform: scaleY(0.6);
   }
 
   a.row:active,
@@ -199,12 +225,27 @@ a {
   transform: scale(1.2);
   filter: blur(100px) saturate(160%);
   opacity: 0;
-  transition: opacity 900ms ease;
+  transition: opacity 1200ms ease;
   pointer-events: none;
 }
 
-body.has-avatar-bg .bg-avatar {
+/* Two layers crossfade: only the active one is visible (see setBackground). */
+body.has-avatar-bg .bg-avatar.is-active {
   opacity: 1;
+}
+
+/* --- Film grain --- */
+/* A faint static noise texture over the background. Stops big blurred areas
+   from banding and gives the page some texture. Below the content, so text
+   and glass stay crisp. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.09;
+  background-size: 160px 160px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1.6 -0.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 body.has-avatar-bg .blobs {
@@ -226,7 +267,8 @@ body.has-avatar-bg .blobs {
 .admin-review,
 .media-round,
 .media-box,
-.footer__pill {
+.footer__pill,
+.activity {
   position: relative;
   overflow: hidden;
   background: var(--glass-fill);
@@ -248,21 +290,185 @@ body.has-avatar-bg .blobs {
 .admin-review::before,
 .media-round::before,
 .media-box::before,
-.footer__pill::before {
+.footer__pill::before,
+.activity::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 55%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 45%);
   pointer-events: none;
 }
 
 .group {
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.1) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 10px 30px rgba(24, 24, 27, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+  position: relative;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 0 24px -8px rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+/* --- Liquid Glass: specular rim --- */
+/* A 1.5px gradient ring drawn on top of the border (masked to the edge only),
+   so each surface catches light on one corner and fades on the other, which
+   reads as thick, curved glass rather than a flat translucent panel. */
+
+.pill::after,
+.status-bubble::after,
+.row::after,
+.back-link::after,
+.portfolio-card::after,
+.project-detail__link::after,
+.baseplate-cta::after,
+.review-card::after,
+.review-form::after,
+.admin-review::after,
+.footer__pill::after,
+.activity::after,
+.group::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: var(--glass-rim);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+/* --- Liquid Glass: cursor-following shine (desktop only) --- */
+/* liquidGlass.ts sets --lx/--ly on each surface to the cursor position
+   inside it, so a soft highlight slides across the glass and the rim
+   brightens on the side nearest the cursor. */
+
+.group::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+html.has-pointer .pill::before,
+html.has-pointer .status-bubble::before,
+html.has-pointer .row::before,
+html.has-pointer .back-link::before,
+html.has-pointer .portfolio-card::before,
+html.has-pointer .project-detail__link::before,
+html.has-pointer .baseplate-cta::before,
+html.has-pointer .review-card::before,
+html.has-pointer .review-form::before,
+html.has-pointer .admin-review::before,
+html.has-pointer .footer__pill::before,
+html.has-pointer .activity::before,
+html.has-pointer .group::before {
+  background: radial-gradient(
+      200px circle at var(--lx, -500px) var(--ly, -500px),
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0) 70%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 45%);
+}
+
+html.has-pointer .group::before {
+  background: radial-gradient(
+    320px circle at var(--lx, -500px) var(--ly, -500px),
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0) 70%
+  );
+}
+
+html.has-pointer .pill::after,
+html.has-pointer .status-bubble::after,
+html.has-pointer .row::after,
+html.has-pointer .back-link::after,
+html.has-pointer .portfolio-card::after,
+html.has-pointer .project-detail__link::after,
+html.has-pointer .baseplate-cta::after,
+html.has-pointer .review-card::after,
+html.has-pointer .review-form::after,
+html.has-pointer .admin-review::after,
+html.has-pointer .footer__pill::after,
+html.has-pointer .activity::after,
+html.has-pointer .group::after {
+  background: radial-gradient(
+      140px circle at var(--lx, -500px) var(--ly, -500px),
+      rgba(255, 255, 255, 0.55),
+      rgba(255, 255, 255, 0) 70%
+    ),
+    var(--glass-rim);
+}
+
+/* --- Liquid Glass: refraction (Chromium only, see src/lib/liquidGlass.ts) --- */
+/* Only on surfaces that sit directly over the page background. Rows live
+   inside a .group, which is already a backdrop root, so refracting them would
+   only bend the group's own fill — extra cost for no visible effect. */
+
+html.lg-refract .group,
+html.lg-refract .pill,
+html.lg-refract .status-bubble,
+html.lg-refract .back-link,
+html.lg-refract .project-detail__link,
+html.lg-refract .baseplate-cta,
+html.lg-refract .footer__pill,
+html.lg-refract .activity {
+  backdrop-filter: blur(var(--glass-blur)) url(#lg-refract) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) url(#lg-refract) saturate(var(--glass-saturate));
+}
+
+/* --- Liquid Glass: accessibility fallback --- */
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .pill,
+  .status-bubble,
+  .row,
+  .back-link,
+  .portfolio-card,
+  .project-detail__link,
+  .baseplate-cta,
+  .review-card,
+  .review-form,
+  .admin-review,
+  .footer__pill,
+  .activity,
+  .group {
+    background: var(--glass-solid);
+    border-color: var(--glass-solid-border);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .pill::before,
+  .status-bubble::before,
+  .row::before,
+  .back-link::before,
+  .portfolio-card::before,
+  .project-detail__link::before,
+  .baseplate-cta::before,
+  .review-card::before,
+  .review-form::before,
+  .admin-review::before,
+  .footer__pill::before,
+  .activity::before,
+  .pill::after,
+  .status-bubble::after,
+  .row::after,
+  .back-link::after,
+  .portfolio-card::after,
+  .project-detail__link::after,
+  .baseplate-cta::after,
+  .review-card::after,
+  .review-form::after,
+  .admin-review::after,
+  .footer__pill::after,
+  .activity::after,
+  .group::after {
+    display: none;
+  }
 }
 
 /* --- Layout --- */
@@ -339,7 +545,22 @@ body.has-avatar-bg .blobs {
   background: linear-gradient(135deg, #a1a1aa, #52525b);
 }
 
+/* Discord draws decorations at 1.2x the avatar, centred on it. */
+.avatar-decoration {
+  position: absolute;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.avatar-decoration[hidden] {
+  display: none;
+}
+
 .status-dot {
+  z-index: 2;
   position: absolute;
   bottom: 4px;
   right: 4px;
@@ -416,11 +637,264 @@ body.has-avatar-bg .blobs {
   margin: 0;
 }
 
-.handles {
-  font-family: var(--font-body);
-  color: var(--fg-muted);
+/* Offline: no status bubble, so the name drops to the bottom of the avatar
+   row and grows to fill the space. */
+body.is-offline .hero__identity {
+  align-self: stretch;
+  justify-content: flex-end;
+  min-height: 96px;
+}
+
+body.is-offline .name {
+  font-size: 42px;
+  line-height: 1;
+  padding-bottom: 6px;
+}
+
+.name {
+  transition: font-size 300ms ease;
+}
+
+/* --- Live Discord activities --- */
+
+.activities {
+  /* Same gentle cursor tilt as the socials card (see liquidGlass.ts). */
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 28px;
+  /* Animates `translate`, not `transform`, so it doesn't fight the tilt. */
+  animation: fade-in-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fade-in-rise {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.activities[hidden] {
+  display: none;
+}
+
+/* Same corner radius as the socials card, so every card-level surface
+   matches; the artwork's radius is the card radius minus the padding, so the
+   corners stay concentric. */
+.activity {
+  --card-radius: 36px;
+  --card-pad: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: var(--card-pad);
+  border-radius: var(--card-radius);
+}
+
+/* --- Spotify card: album-coloured accents --- */
+/* (No album glow inside the card: the page background already becomes the
+   album art while Spotify plays, so it would just repeat it.) */
+
+.activity--spotify::before,
+.activity--spotify::after {
+  z-index: 1;
+}
+
+/* Edge glow in the album's colour (--accent is set by main.ts). */
+.activity--spotify {
+  box-shadow: var(--glass-shadow), 0 0 32px -10px var(--accent, transparent);
+  transition: box-shadow 600ms ease;
+}
+
+.activity--spotify .activity__bar-fill {
+  background: var(--accent, currentColor);
+}
+
+.activity--spotify .visualiser__bar {
+  background: var(--accent, #1db954);
+}
+
+.activity__art-wrap {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+/* A soft blurred copy of the cover underneath it, like it's lighting the card. */
+.activity__art-glow {
+  position: absolute;
+  inset: 6px 4px -6px;
+  border-radius: calc(var(--card-radius) - var(--card-pad));
+  background-size: cover;
+  background-position: center;
+  filter: blur(14px) saturate(160%);
+  opacity: 0.85;
+}
+
+.activity__art {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  align-self: flex-start;
+  width: 76px;
+  height: 76px;
+  border-radius: calc(var(--card-radius) - var(--card-pad));
+  object-fit: cover;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.activity__art--placeholder {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 28px;
+  color: #fff;
+  background: linear-gradient(135deg, #a1a1aa, #52525b);
+}
+
+.activity__body {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.activity__body p {
   margin: 0;
-  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.activity__label,
+.activity__line {
+  opacity: 0.75;
+}
+
+.activity__label-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.activity__title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.activity__line {
+  font-size: 13px;
+}
+
+.activity__body .activity__elapsed {
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}
+
+/* --- Spotify progress --- */
+
+.activity__progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.activity__time {
+  min-width: 28px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.activity__time:last-child {
+  text-align: right;
+}
+
+.activity__bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.28);
+  overflow: hidden;
+}
+
+.activity__bar-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: currentColor;
+  transition: width 1s linear;
+}
+
+/* --- Equaliser bars (decorative "now playing" indicator) --- */
+/* Spotify doesn't expose the audio, so these don't follow the actual song. */
+
+.visualiser {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+  margin-left: 2px;
+}
+
+.visualiser__bar {
+  width: 2.5px;
+  height: 100%;
+  border-radius: 2px;
+  background: #1db954;
+  transform-origin: bottom;
+  animation: visualiser-bounce 900ms ease-in-out infinite alternate;
+}
+
+.visualiser__bar:nth-child(2) {
+  animation-duration: 650ms;
+  animation-delay: -200ms;
+}
+.visualiser__bar:nth-child(3) {
+  animation-duration: 1100ms;
+  animation-delay: -450ms;
+}
+.visualiser__bar:nth-child(4) {
+  animation-duration: 780ms;
+  animation-delay: -100ms;
+}
+
+@keyframes visualiser-bounce {
+  0% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0.45);
+  }
 }
 
 .pill-row {
@@ -461,7 +935,10 @@ body.has-avatar-bg .blobs {
 .groups {
   position: relative;
   width: 100%;
-  margin-top: 40px;
+  /* Tilts slightly toward the cursor (set by liquidGlass.ts; desktop only). */
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+  margin-top: 28px;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -514,7 +991,7 @@ body.has-avatar-bg .blobs {
   padding: 16px 44px;
   border-radius: 999px;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
 }
 
 a.row:hover,
@@ -528,7 +1005,8 @@ button.row:focus-visible {
 
 a.row:active,
 button.row:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
+  transition-duration: 120ms;
 }
 
 button.row {
@@ -597,7 +1075,7 @@ button.row {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
 }
 
 .back-link:hover,
@@ -642,7 +1120,7 @@ button.row {
   border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
   animation: fade-in-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -781,7 +1259,7 @@ button.row {
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
 }
 
 .project-detail__link:hover,
@@ -809,7 +1287,7 @@ button.row {
   font-weight: 700;
   font-size: 18px;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
 }
 
 .baseplate-cta:hover,
@@ -880,7 +1358,7 @@ a.review-card--feed {
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: background-color 200ms ease, transform 320ms var(--glass-press), box-shadow 200ms ease;
 }
 
 a.review-card--feed:hover,
@@ -1239,7 +1717,7 @@ body.media-is-open .media-panel {
 }
 
 /* Wide screens: the card slides left and the panel sits beside it. The card
-   is ~510px wide once .content__center's 1.18 scale applies. */
+   is ~510px wide once .content__center's 1.18 zoom applies. */
 @media (min-width: 1200px) {
   .content {
     transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -1252,15 +1730,12 @@ body.media-is-open .media-panel {
   .media-panel {
     inset: 24px 24px 24px 600px;
     border-radius: 36px;
-    background: linear-gradient(165deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.1) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    box-shadow: 0 10px 30px rgba(24, 24, 27, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+    /* Same clear glass as .group (the Socials box). */
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.6),
+      inset 0 0 24px -8px rgba(255, 255, 255, 0.4);
     transform: translateX(calc(100% + 48px));
-  }
-
-  body.dark-bg-text .media-panel {
-    background: linear-gradient(165deg, rgba(24, 24, 27, 0.3) 0%, rgba(24, 24, 27, 0.12) 100%);
-    border-color: rgba(255, 255, 255, 0.16);
   }
 }
 
@@ -1510,6 +1985,11 @@ body.media-page {
 
 body.media-page .blobs {
   display: none;
+}
+
+/* .content centres its children on desktop; the item should fill the column. */
+#media-root {
+  width: 100%;
 }
 
 .media-detail-bg::after {
@@ -1906,14 +2386,22 @@ body.media-page .blobs {
   .content {
     flex: 1;
     justify-content: center;
+    align-items: center;
     padding-top: 40px;
     padding-bottom: 40px;
+    /* Room for the zoomed column below (432px × 1.18 ≈ 510px, plus gutters). */
+    max-width: 620px;
   }
 
   .content__center {
-    width: 100%;
-    max-width: 480px;
-    transform: scale(1.18);
+    /* A fixed width, not 100%: percentage widths don't grow with `zoom`, so
+       the column would stay at its normal width while everything inside it
+       got bigger — a squashed, skinny layout. 432px is the normal column
+       width (480px minus the 24px gutters); zoomed it becomes ≈510px. */
+    width: 432px;
+    /* zoom, not transform: scale(). A transform here makes Chrome draw the
+       glass blur in the wrong place once the cards tilt in 3D. */
+    zoom: 1.18;
   }
 
   .bottom-row {

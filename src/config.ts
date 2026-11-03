@@ -1,7 +1,6 @@
 export const config = {
   displayName: "zephyn",
   tagline: "Roblox Developer",
-  handles: ["zephyn.fbx", "zephynnn", "zeph.dev"],
 
   // IANA timezone used for the live local-time pill.
   timezone: "Europe/London",
@@ -10,6 +9,9 @@ export const config = {
     // Only used for the live Lanyard presence widget in the hero — the
     // "Pages" links group no longer includes a Discord row.
     userId: "1491487646424498357",
+    // Public URL of the self-hosted presence bot (presence-bot/, on Railway),
+    // e.g. "https://zephyn-presence.up.railway.app". Leave empty to use Lanyard.
+    presenceUrl: "",
   },
 
   youtube: {
@@ -18,8 +20,7 @@ export const config = {
   },
 
   roblox: {
-    // TODO: replace with your actual Roblox profile URL (e.g. https://www.roblox.com/users/<id>/profile)
-    url: "https://www.roblox.com/users/0/profile",
+    url: "https://www.roblox.com/users/1576949974/profile",
   },
 
   tiktok: {

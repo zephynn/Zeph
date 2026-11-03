@@ -36,6 +36,7 @@ function render(item: MediaItem) {
 
   if (item.cover) {
     bgEl.style.backgroundImage = `url("${item.cover}")`;
+    bgEl.classList.add("is-active");
     document.body.classList.add("has-avatar-bg");
   }
 
