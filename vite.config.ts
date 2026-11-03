@@ -14,7 +14,7 @@ export default defineConfig({
         portfolio: resolve(__dirname, "portfolio.html"),
         project: resolve(__dirname, "project.html"),
         reviews: resolve(__dirname, "reviews.html"),
-        passport: resolve(__dirname, "passport.html"),
+        media: resolve(__dirname, "media.html"),
         baseplate: resolve(__dirname, "baseplate.html"),
         admin: resolve(__dirname, "admin.html"),
       },

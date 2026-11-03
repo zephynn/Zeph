@@ -2,8 +2,7 @@
 
 Frosted-glass link-in-bio site with live Discord presence, a live YouTube
 subscriber count, a view counter, an admin-editable portfolio with
-per-project detail pages, a moderated client review system, and an
-interests "passport" page.
+per-project detail pages, a moderated client review system, and a Media shelf of things I'm into.
 
 ## Stack
 
@@ -17,11 +16,11 @@ interests "passport" page.
 - `api/reviews/*` — review submission (public, rate-limited + honeypot),
   public listing (approved only), and password-gated admin endpoints
 - `api/portfolio/*` — public project listing, password-gated create/edit/delete
-- `api/passport/*` — password-gated search proxy (TMDB, AniList, IGDB, iTunes)
-  and the passport item store (public read, password-gated save/delete)
+- `api/media/*` — password-gated search/details proxy (TMDB, AniList, IGDB,
+  iTunes) and the Media store (public read, password-gated save/delete)
 - Upstash Redis (via Vercel's Marketplace integration) for the view counter,
   reviews (a hash: review id → JSON), portfolio projects (a hash: slug → JSON),
-  and passport items (a hash: `<type>-<sourceId>` → JSON)
+  and Media items (a hash `media`: `<type>-<sourceId>` → JSON)
 
 Each `api/*.ts` function is deliberately self-contained (no shared local
 imports between them) — only npm packages, even where that means a little
@@ -44,9 +43,10 @@ api/portfolio/list.ts                 Public: list projects (falls back to 3 pla
                                        until you save a real one via /admin)
 api/portfolio/save.ts                  Password-gated: create or update a project (by slug)
 api/portfolio/delete.ts                 Password-gated: delete a project
-api/passport/search.ts                   Password-gated: search TMDB / AniList / IGDB / iTunes,
-                                          normalised to one result shape
-api/passport/items.ts                     GET public list; POST (password) save or delete
+api/media/search.ts                      Password-gated: search TMDB / AniList / IGDB / iTunes, or
+                                          fetch one result's full details (?id=)
+api/media/items.ts                        GET public list or one item (?id=); POST (password)
+                                          save or delete
 
 src/config.ts                  Discord ID, YouTube channel ID, social links — edit this
 src/lib/discord.ts               Lanyard WebSocket client
@@ -54,7 +54,8 @@ src/lib/youtube.ts                 Client-side polling wrapper around /api/youtu
 src/lib/views.ts                     Client-side fetch wrapper around /api/views
 src/lib/reviews.ts                    Client-side fetch/submit wrappers around /api/reviews/*
 src/lib/portfolio.ts                   Client-side fetch wrapper around /api/portfolio/list
-src/lib/passport.ts                     Passport types, fetch wrapper, cover builder
+src/lib/media.ts                        Media types, fetch wrappers, cover/stars/tilt helpers
+src/lib/media-panel.ts                  The home page's Media panel (rows, arrows, #media hash)
 src/lib/color.ts                         Avatar luminance sampling (light/dark text auto-switch)
 src/lib/time.ts                            Local-time pill math
 src/lib/animate.ts                           Count-up number animation
@@ -63,7 +64,7 @@ src/main.ts        + index.html        Main link-in-bio page
 src/portfolio.ts   + portfolio.html     Portfolio grid, cards link to /project/<slug>
 src/project.ts     + project.html       Project detail + its reviews + submit form
 src/reviews.ts     + reviews.html       Global feed of all approved reviews
-src/passport.ts    + passport.html      Interests passport: Obsession / Currently / All-time
+src/media.ts       + media.html         One Media item's page (/media/<type>-<id>)
 src/admin.ts       + admin.html         Password-gated: moderate reviews, manage portfolio
                                         projects, stats + CSV export. Not linked anywhere in
                                         the site nav — you just know the URL (/admin).
@@ -109,7 +110,7 @@ Lanyard's presence data is fetched directly from the browser
 1. Push this repo to GitHub.
 2. Import it in Vercel (vite is auto-detected; `api/` becomes serverless
    functions automatically, no extra config needed beyond `vercel.json`,
-   which is already checked in for `cleanUrls` + the `/project/:slug` rewrite).
+   which is already checked in for `cleanUrls` + the `/project/:slug` and `/media/:id` rewrites).
 3. Add the Upstash integration from Vercel's Marketplace (Storage tab) —
    pick **Redis**, not QStash/Vector/Kafka if those show up too.
 4. Set the env vars from `.env.example` in the Vercel project.
@@ -149,32 +150,45 @@ Behind the same password gate as reviews:
   review, and clicking the page title 5 times fast triggers a small joke.
   Both respect `prefers-reduced-motion`.
 
-## The passport page (`/passport`)
+## Media
 
-A note-first "about me" collection of films, shows, anime, manga, games and
-music. Managed from the **Passport** section of `/admin`:
+A **Media** button under Socials on the home page opens a shelf of songs,
+games, films, shows, anime and manga, one row per category. On screens
+1200px and wider the main card slides left and the shelf sits beside it;
+narrower screens get a full-screen sheet. `/#media` opens it directly (and
+`/media` redirects there), and the browser back button closes it.
 
-1. Pick a type, search, click the right result.
-2. Write a note (required — the notes are the point of the page).
-3. Choose **Currently** or **All-time**, optionally tick **Make this my
-   Obsession** (only one at a time; featuring a new one un-features the old).
+- Covers are tall (2:3) except songs, which are square. Hovering with a
+  mouse tilts the cover slightly; phones just tap.
+- Favourites get a small ★ on the cover and lead their row; everything
+  else is newest first. Stars (whole, 1–5) are optional and hidden when
+  unrated.
+- Clicking a cover opens `/media/<type>-<id>`: the cover, your note
+  ("My take", optional), an About box with the overview and key facts
+  (director, developer, studio, runtime, platforms…), and a link to the
+  source. The background is the cover, blurred, like the avatar on the
+  home page.
 
-Metadata (title, year/creator, cover URL, source link) is snapshotted into
-Redis when you save, so visitors never trigger third-party API calls. Cover
-images are hotlinked from each provider's CDN (`image.tmdb.org`,
-`s4.anilist.co`, `images.igdb.com`, `*.mzstatic.com`) — the save endpoint only
-accepts covers from those hosts. If a cover link ever dies, the card falls
-back to a lettered tile. Picking something already in the passport opens it
-for editing instead of creating a duplicate.
+### Adding things
 
-Cards are tall (2:3) for posters/box art and square for music. Needs
-`TMDB_API_KEY`, `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (see
-`.env.example`); AniList and iTunes need nothing. The page footer carries
-TMDB's required attribution notice — their guidelines also ask for the TMDB
-logo, which isn't included yet (grab it from their branding page if you
-want to be fully compliant).
+In the **Media** section of `/admin`: pick a type, search, click the right
+result (its full details are fetched at that moment), set a rating and
+Favourite if you want, optionally write a note, save. Picking something
+that's already on the shelf opens it for editing instead of duplicating it.
 
-The passport uses two functions (`search.ts`, `items.ts`) rather than one per
+All the info is snapshotted into Redis when you save, so visitors never
+trigger third-party API calls. Cover images are hotlinked from each
+provider's CDN (`image.tmdb.org`, `s4.anilist.co`, `images.igdb.com`,
+`*.mzstatic.com`); the save endpoint only accepts covers from those hosts,
+and a dead image link falls back to a lettered tile. Editing an item keeps
+its saved info as-is (re-add it to refresh the details).
+
+Needs `TMDB_API_KEY`, `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (see
+`.env.example`); AniList and iTunes need no keys. The shelf and every
+detail page carry TMDB's required attribution notice. Their guidelines
+also ask for the TMDB logo, which isn't included yet.
+
+Media uses two functions (`search.ts`, `items.ts`) rather than one per
 action, to keep the deployment's function count down.
 
 ## Notes on the sandbox / dev-container testing

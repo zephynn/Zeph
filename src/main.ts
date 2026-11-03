@@ -6,6 +6,7 @@ import { describeLocalTime } from "./lib/time";
 import { estimateLuminance } from "./lib/color";
 import { animateCount } from "./lib/animate";
 import { fetchViewCount } from "./lib/views";
+import { setupMediaPanel } from "./lib/media-panel";
 
 const yearEl = document.getElementById("year")!;
 yearEl.textContent = String(new Date().getFullYear());
@@ -150,3 +151,5 @@ void fetchViewCount().then((count) => {
   viewsPillEl.hidden = false;
   animateCount(viewsCountEl, count, (n) => n.toLocaleString());
 });
+
+setupMediaPanel();

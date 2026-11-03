@@ -22,6 +22,8 @@
   --status-dnd: #f23f43;
   --status-offline: #9ca3af;
 
+  --sheet-fill: linear-gradient(165deg, rgba(241, 241, 243, 0.9) 0%, rgba(241, 241, 243, 0.78) 100%);
+
   --radius-lg: 28px;
 
   --font-heading: "Space Grotesk", sans-serif;
@@ -41,6 +43,7 @@ body.dark-bg-text {
     inset 0 -10px 18px -14px rgba(255, 255, 255, 0.12);
   --glass-shadow-hover: 0 14px 36px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3),
     inset 0 -10px 18px -14px rgba(255, 255, 255, 0.16);
+  --sheet-fill: linear-gradient(165deg, rgba(24, 18, 20, 0.88) 0%, rgba(24, 18, 20, 0.76) 100%);
 }
 
 body.dark-bg-text .group {
@@ -150,9 +153,14 @@ a {
   .reviews-section,
   .reviews-list--feed,
   .baseplate-cta,
-  .passport-section,
   .admin-title--shake {
     animation: none;
+  }
+
+  .media-panel,
+  .content,
+  .media-cover {
+    transition: none !important;
   }
 
   .status-dot[data-status="online"]::after {
@@ -216,7 +224,8 @@ body.has-avatar-bg .blobs {
 .review-card,
 .review-form,
 .admin-review,
-.passport-card,
+.media-round,
+.media-box,
 .footer__pill {
   position: relative;
   overflow: hidden;
@@ -237,7 +246,8 @@ body.has-avatar-bg .blobs {
 .review-card::before,
 .review-form::before,
 .admin-review::before,
-.passport-card::before,
+.media-round::before,
+.media-box::before,
 .footer__pill::before {
   content: "";
   position: absolute;
@@ -508,14 +518,22 @@ body.has-avatar-bg .blobs {
 }
 
 a.row:hover,
-a.row:focus-visible {
+a.row:focus-visible,
+button.row:hover,
+button.row:focus-visible {
   background: var(--glass-fill-hover);
   transform: translateY(-1px);
   box-shadow: var(--glass-shadow-hover);
 }
 
-a.row:active {
+a.row:active,
+button.row:active {
   transform: scale(0.97);
+}
+
+button.row {
+  font: inherit;
+  color: inherit;
 }
 
 .row:focus-visible {
@@ -1189,233 +1207,502 @@ a.review-card--feed:focus-visible {
   }
 }
 
-/* --- Passport page --- */
-/* Note-first cards: the cover is a supporting thumbnail on the left, the
-   note gets the width and the larger type. Cover shape follows the media
-   (posters/box art 2:3, music 1:1) — see coverShape() in lib/passport.ts. */
+/* --- Media (home panel + /media/<id> detail page) --- */
+/* Same monochrome glass as the rest of the site. Covers are the only
+   colour; favourites get a small frosted star, not a colour of their own. */
 
-.passport-intro {
-  margin: -6px 0 0;
+.media-panel[hidden] {
+  display: none;
+}
+
+.media-panel {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--sheet-fill);
+  backdrop-filter: blur(18px) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(18px) saturate(var(--glass-saturate));
+  transform: translateY(100%);
+  transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body.media-is-open .media-panel {
+  transform: none;
+}
+
+@media (max-width: 1199px) {
+  body.media-is-open {
+    overflow: hidden;
+  }
+}
+
+/* Wide screens: the card slides left and the panel sits beside it. The card
+   is ~510px wide once .content__center's 1.18 scale applies. */
+@media (min-width: 1200px) {
+  .content {
+    transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  body.media-is-open .content {
+    transform: translateX(calc(-50vw + 300px));
+  }
+
+  .media-panel {
+    inset: 24px 24px 24px 600px;
+    border-radius: 36px;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.1) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 10px 30px rgba(24, 24, 27, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+    transform: translateX(calc(100% + 48px));
+  }
+
+  body.dark-bg-text .media-panel {
+    background: linear-gradient(165deg, rgba(24, 24, 27, 0.3) 0%, rgba(24, 24, 27, 0.12) 100%);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+}
+
+.media-panel__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 20px 6px;
+}
+
+.media-panel__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 24px;
+}
+
+.media-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 0 calc(28px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.media-panel__status {
+  margin: 0;
+  padding: 0 20px;
   font-size: 14px;
   color: var(--fg-muted);
 }
 
-.passport {
-  width: 100%;
-  margin-top: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-.passport-section {
-  display: flex;
-  flex-direction: column;
-  animation: fade-in-up 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.passport-section:nth-child(2) {
-  animation-delay: 80ms;
-}
-.passport-section:nth-child(3) {
-  animation-delay: 160ms;
-}
-
-.passport-section__label {
-  margin: 0 8px 12px;
-}
-
-.passport-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.passport-card {
-  --cover-w: 84px;
+.media-round {
+  width: 36px;
+  height: 36px;
+  padding: 0;
   display: grid;
-  grid-template-columns: var(--cover-w) minmax(0, 1fr);
-  align-items: start;
-  gap: 16px;
-  padding: 14px;
-  border-radius: var(--radius-lg);
+  place-items: center;
+  border-radius: 50%;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 200ms ease, transform 200ms ease, opacity 200ms ease;
 }
 
-/* Keep content above the shared glass ::before highlight, which otherwise
-   washes out the top of the card's text. */
-.passport-card > *,
-.passport-admin-row > * {
+.media-round:hover,
+.media-round:focus-visible {
+  background: var(--glass-fill-hover);
+}
+
+.media-round:active {
+  transform: scale(0.94);
+}
+
+.media-round svg {
+  width: 16px;
+  height: 16px;
+}
+
+.media-row {
   position: relative;
-  z-index: 1;
 }
 
-.passport-card--feature {
-  --cover-w: 132px;
-  gap: 20px;
-  padding: 18px;
+.media-row__label {
+  margin: 0 20px 10px;
 }
 
-.passport-cover {
+.media-row__track {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 20px;
+  scrollbar-width: none;
+  /* Room above/below so tilted covers and their shadows aren't clipped. */
+  padding: 10px 20px 8px;
+  margin-top: -10px;
+}
+
+.media-row__track::-webkit-scrollbar {
+  display: none;
+}
+
+.media-row__arrow {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  margin-top: -18px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.media-row__arrow--prev {
+  left: 10px;
+}
+
+.media-row__arrow--next {
+  right: 10px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .media-row:hover .media-row__arrow:not(:disabled),
+  .media-row__arrow:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.media-card {
+  flex: none;
+  width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  scroll-snap-align: start;
+  perspective: 800px;
+  border-radius: 14px;
+}
+
+.media-card--square {
+  width: 190px;
+}
+
+.media-card:focus-visible {
+  outline: 2px solid var(--fg-muted);
+  outline-offset: 4px;
+}
+
+.media-card__title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14.5px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.media-stars {
+  display: inline-flex;
+  gap: 1px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.media-stars .is-off {
+  opacity: 0.25;
+}
+
+.media-cover {
+  --rx: 0deg;
+  --ry: 0deg;
   position: relative;
   width: 100%;
-  overflow: hidden;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #d4d4d8, #a1a1aa);
-  box-shadow: 0 6px 16px rgba(24, 24, 27, 0.18);
-}
-
-.passport-cover--tall {
   aspect-ratio: 2 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #d4d4d8, #a1a1aa);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease;
 }
 
-.passport-cover--square {
+.media-cover--square {
   aspect-ratio: 1 / 1;
 }
 
-.passport-cover img {
+/* Same top-down sheen as every other glass surface on the site. */
+.media-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 45%);
+  pointer-events: none;
+}
+
+.media-cover img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.passport-cover--empty {
+.media-cover--empty {
   display: grid;
   place-items: center;
+}
+
+.media-cover__letter {
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 24px;
+  font-size: 32px;
   color: rgba(255, 255, 255, 0.9);
 }
 
-.passport-card__body {
+.media-cover__fav {
+  position: absolute;
+  z-index: 1;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--fg);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .media-card:hover .media-cover,
+  .media-detail__cover:hover .media-cover {
+    transition: transform 90ms linear, box-shadow 200ms ease;
+    box-shadow: var(--glass-shadow-hover);
+  }
+}
+
+@media (max-width: 640px) {
+  .media-card {
+    width: 128px;
+  }
+
+  .media-card--square {
+    width: 158px;
+  }
+}
+
+/* Detail page (/media/<id>) — background is the item's blurred cover, the
+   same treatment the home page gives the Discord avatar. The page is always
+   in the light-on-dark theme, with a scrim so text stays readable on bright
+   covers (and a plain dark ground if the cover can't load). */
+
+body.media-page {
+  --bg: #141012;
+}
+
+body.media-page .blobs {
+  display: none;
+}
+
+.media-detail-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(12, 10, 11, 0.45);
+}
+
+.media-detail {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 16px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.media-detail__top {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+}
+
+.media-detail__cover {
+  flex: none;
+  width: 150px;
+  perspective: 800px;
+}
+
+.media-detail__cover--square {
+  width: 170px;
+}
+
+.media-detail__heading {
   min-width: 0;
 }
 
-.passport-card__meta {
+.media-detail__type {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  opacity: 0.8;
+}
+
+.media-detail__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1.1;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.media-detail__by {
+  margin: 6px 0 10px;
+  font-size: 14px;
+  color: var(--fg-muted);
+  opacity: 0.8;
+}
+
+.media-detail__rating {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 0 0 4px;
+  font-size: 12.5px;
 }
 
-.passport-chip {
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--glass-border);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.passport-card__since {
-  font-size: 12px;
-  color: var(--fg-muted);
-  opacity: 0.75;
-}
-
-.passport-card__title {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-weight: 600;
+.media-detail__rating .media-stars {
   font-size: 15px;
-  line-height: 1.3;
+  gap: 2px;
 }
 
-.passport-card--feature .passport-card__title {
-  font-size: 20px;
+.media-box {
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
 }
 
-.passport-card__title a:hover,
-.passport-card__title a:focus-visible {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+/* Tall boxes: keep the glass sheen to a thin strip at the top instead of
+   the usual 55%, which turns muddy over a whole paragraph. */
+.media-box::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0px, rgba(255, 255, 255, 0) 48px);
 }
 
-.passport-card__subtitle {
-  margin: 0;
+.media-box > *,
+.media-round > * {
+  position: relative;
+  z-index: 1;
+}
+
+.media-box__label {
+  margin: 0 0 8px;
   font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--fg-muted);
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
-.passport-card__note {
-  margin-top: 8px;
-  font-size: 14px;
+.media-box__text p {
+  margin: 0;
+  font-size: 14.5px;
   line-height: 1.6;
 }
 
-.passport-card--feature .passport-card__note {
-  font-size: 15px;
+.media-box__text p + p {
+  margin-top: 10px;
 }
 
-.passport-card__note p {
+.media-box--note .media-box__text p {
+  font-size: 15.5px;
+}
+
+.media-facts {
+  margin: 14px 0 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 14px;
+  font-size: 13.5px;
+}
+
+.media-facts:first-child {
+  margin-top: 0;
+}
+
+.media-facts dt {
+  color: var(--fg-muted);
+  opacity: 0.75;
+}
+
+.media-facts dd {
   margin: 0;
 }
 
-.passport-card__note p + p {
-  margin-top: 8px;
-}
-
-.passport-credits {
-  margin: 40px 8px 0;
+.media-credit {
+  margin: 8px 4px 0;
   font-size: 11px;
   line-height: 1.5;
   color: var(--fg-muted);
   opacity: 0.7;
 }
 
-.passport-credits a {
+.media-panel__credit {
+  margin: 0;
+  padding: 0 20px;
+}
+
+.media-credit a {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 @media (max-width: 420px) {
-  .passport-card--feature {
-    grid-template-columns: 1fr;
-  }
-
-  .passport-card--feature .passport-cover--tall {
-    width: 160px;
-  }
-
-  .passport-card--feature .passport-cover--square {
-    width: 180px;
+  .media-detail__top {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
-/* --- Passport admin --- */
+/* --- Media admin --- */
 
-.admin-passport {
+.admin-media {
   width: 100%;
   margin-top: 40px;
 }
 
-.passport-search-row {
+.media-search-row {
   display: flex;
   gap: 8px;
   align-items: flex-end;
 }
 
-.passport-search-row .review-form__field:first-child {
-  flex: 0 0 auto;
+.media-search-row[hidden],
+.media-results[hidden],
+.media-picked[hidden] {
+  display: none;
 }
 
-.passport-search-row .review-form__field:nth-child(2) {
+.media-search-row .review-form__field:nth-child(2) {
   flex: 1;
   min-width: 0;
 }
 
-.passport-search-row .review-form__submit {
+.media-search-row .review-form__submit {
   align-self: flex-end;
 }
 
-.passport-results {
+.media-results {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1423,13 +1710,7 @@ a.review-card--feed:focus-visible {
   overflow-y: auto;
 }
 
-.passport-search-row[hidden],
-.passport-results[hidden],
-.passport-picked[hidden] {
-  display: none;
-}
-
-.passport-result {
+.media-result {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);
   align-items: center;
@@ -1445,22 +1726,25 @@ a.review-card--feed:focus-visible {
   cursor: pointer;
 }
 
-.passport-result:hover,
-.passport-result:focus-visible {
+.media-result:hover,
+.media-result:focus-visible {
   border-color: var(--glass-border);
   background: var(--glass-fill-hover);
 }
 
-.passport-result .passport-cover {
+.media-result .media-cover,
+.media-admin-row .media-cover,
+.media-picked .media-cover {
   border-radius: 6px;
   box-shadow: none;
 }
 
-.passport-result .passport-cover--empty {
+.media-result .media-cover__letter,
+.media-admin-row .media-cover__letter {
   font-size: 14px;
 }
 
-.passport-result__title {
+.media-result__title {
   display: block;
   font-weight: 600;
   font-size: 14px;
@@ -1469,55 +1753,64 @@ a.review-card--feed:focus-visible {
   white-space: nowrap;
 }
 
-.passport-result__subtitle {
+.media-result__sub {
   display: block;
   font-size: 12px;
   color: var(--fg-muted);
   opacity: 0.75;
 }
 
-.passport-picked {
+.media-picked {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
   gap: 14px;
   align-items: center;
 }
 
-.passport-options {
+.media-options {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 16px;
-  font-size: 13px;
-  font-weight: 600;
 }
 
-.passport-options label {
+.media-options .review-form__field {
+  flex: 0 0 auto;
+}
+
+.media-check {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.passport-admin-row {
+.media-admin-row {
   flex-direction: row;
   align-items: center;
   gap: 12px;
 }
 
-.passport-admin-row .passport-cover {
-  flex: 0 0 40px;
-  border-radius: 6px;
-  box-shadow: none;
+.media-admin-row > * {
+  position: relative;
+  z-index: 1;
 }
 
-.passport-admin-row__text {
+.media-admin-row .media-cover {
+  flex: 0 0 40px;
+}
+
+.media-admin-row__text {
   display: flex;
   flex-direction: column;
   min-width: 0;
   flex: 1;
 }
 
-.passport-admin-row .admin-review__actions {
+.media-admin-row .admin-review__actions {
   margin-top: 0;
 }
 

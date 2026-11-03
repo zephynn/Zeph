@@ -87,54 +87,61 @@
             </form>
           </section>
 
-          <section class="admin-passport">
-            <h2 class="reviews-heading">Passport</h2>
-            <p class="reviews-empty">Shown at <a href="/passport" target="_blank" rel="noopener">/passport</a>.</p>
-            <div id="passport-admin-list" class="portfolio-admin-list" style="margin-top: 16px"></div>
+          <section class="admin-media">
+            <h2 class="reviews-heading">Media</h2>
+            <p class="reviews-empty">Shown from the Media button on the <a href="/#media" target="_blank" rel="noopener">home page</a>.</p>
+            <div id="media-admin-list" class="portfolio-admin-list" style="margin-top: 16px"></div>
 
-            <form id="passport-form" class="review-form">
-              <p class="review-form__status" id="passport-form-mode">Add something</p>
+            <form id="media-form" class="review-form">
+              <p class="review-form__status" id="media-form-mode">Add something</p>
 
-              <div class="passport-search-row" id="passport-search-row">
+              <div class="media-search-row" id="media-search-row">
                 <label class="review-form__field">
                   <span>Type</span>
                   <select name="type">
+                    <option value="song">Song</option>
+                    <option value="game">Game</option>
                     <option value="movie">Film</option>
                     <option value="show">Show</option>
                     <option value="anime">Anime</option>
                     <option value="manga">Manga</option>
-                    <option value="game">Game</option>
-                    <option value="album">Album</option>
-                    <option value="song">Song</option>
                   </select>
                 </label>
                 <label class="review-form__field">
                   <span>Search</span>
                   <input type="search" name="query" maxlength="100" autocomplete="off" />
                 </label>
-                <button type="button" class="review-form__submit" id="passport-search-btn">Search</button>
+                <button type="button" class="review-form__submit" id="media-search-btn">Search</button>
               </div>
 
-              <div id="passport-results" class="passport-results" role="listbox" aria-label="Search results" hidden></div>
+              <div id="media-results" class="media-results" aria-label="Search results" hidden></div>
+              <div id="media-picked" class="media-picked" hidden></div>
 
-              <div id="passport-picked" class="passport-picked" hidden></div>
+              <div class="media-options">
+                <label class="review-form__field">
+                  <span>Rating</span>
+                  <select name="rating">
+                    <option value="0">No rating</option>
+                    <option value="5">★★★★★</option>
+                    <option value="4">★★★★</option>
+                    <option value="3">★★★</option>
+                    <option value="2">★★</option>
+                    <option value="1">★</option>
+                  </select>
+                </label>
+                <label class="media-check"><input type="checkbox" name="favourite" /> Favourite</label>
+              </div>
 
               <label class="review-form__field">
-                <span>Your note (the main thing people read — blank line = new paragraph)</span>
-                <textarea name="note" rows="5" maxlength="1200" required></textarea>
+                <span>Your note (optional, shown on its page; blank line = new paragraph)</span>
+                <textarea name="note" rows="4" maxlength="1500"></textarea>
               </label>
 
-              <div class="passport-options">
-                <label><input type="radio" name="shelf" value="current" checked /> Currently</label>
-                <label><input type="radio" name="shelf" value="alltime" /> All-time</label>
-                <label><input type="checkbox" name="featured" /> Make this my Obsession</label>
-              </div>
-
               <div class="admin-review__actions">
-                <button type="submit" class="review-form__submit" id="passport-form-submit">Save to passport</button>
-                <button type="button" class="admin-review__reject" id="passport-form-cancel" hidden>Cancel edit</button>
+                <button type="submit" class="review-form__submit">Save</button>
+                <button type="button" class="admin-review__reject" id="media-form-cancel" hidden>Cancel edit</button>
               </div>
-              <p class="review-form__status" id="passport-form-status" role="status"></p>
+              <p class="review-form__status" id="media-form-status" role="status"></p>
             </form>
           </section>
         </div>

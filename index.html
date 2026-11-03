@@ -103,6 +103,19 @@
               </a>
             </div>
           </section>
+
+          <section class="group" aria-label="More">
+            <div class="group__rows">
+              <button type="button" class="row" id="media-open" aria-controls="media-panel" aria-expanded="false">
+                <svg class="row__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="4" y="5" width="4" height="14" rx="1" stroke="currentColor" stroke-width="1.6" />
+                  <rect x="10" y="5" width="4" height="14" rx="1" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M16.2 6.2L19.8 5.4L21.6 18.4L18 19.2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                </svg>
+                <span class="row__label">Media</span>
+              </button>
+            </div>
+          </section>
         </div>
         </div>
 
@@ -130,6 +143,20 @@
         </div>
       </main>
     </div>
+
+    <aside class="media-panel" id="media-panel" aria-labelledby="media-panel-title" hidden>
+      <header class="media-panel__head">
+        <h2 class="media-panel__title" id="media-panel-title">Media</h2>
+        <button type="button" class="media-round" id="media-close" aria-label="Close media">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+        </button>
+      </header>
+      <div class="media-panel__body" id="media-panel-body">
+        <p class="media-panel__status" id="media-panel-status">Loading&hellip;</p>
+      </div>
+    </aside>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

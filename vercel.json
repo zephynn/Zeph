@@ -1,6 +1,20 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/project/:slug", "destination": "/project.html" }
+    {
+      "source": "/project/:slug",
+      "destination": "/project.html"
+    },
+    {
+      "source": "/media/:id",
+      "destination": "/media.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/media",
+      "destination": "/#media",
+      "permanent": false
+    }
   ]
 }
