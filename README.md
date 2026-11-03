@@ -2,11 +2,12 @@
 
 Frosted-glass link-in-bio site with live Discord presence, a live YouTube
 subscriber count, a view counter, an admin-editable portfolio with
-per-project detail pages, and a moderated client review system.
+per-project detail pages, a moderated client review system, and an
+interests "passport" page.
 
 ## Stack
 
-- Vite + TypeScript, no framework — 6 pages built as separate Vite entries
+- Vite + TypeScript, no framework — 7 pages built as separate Vite entries
   (see `vite.config.ts`), not a single-page app
 - `api/youtube.ts` — proxies YouTube Data API v3 so the API key never
   reaches the browser
@@ -16,8 +17,11 @@ per-project detail pages, and a moderated client review system.
 - `api/reviews/*` — review submission (public, rate-limited + honeypot),
   public listing (approved only), and password-gated admin endpoints
 - `api/portfolio/*` — public project listing, password-gated create/edit/delete
+- `api/passport/*` — password-gated search proxy (TMDB, AniList, IGDB, iTunes)
+  and the passport item store (public read, password-gated save/delete)
 - Upstash Redis (via Vercel's Marketplace integration) for the view counter,
-  reviews (a hash: review id → JSON), and portfolio projects (a hash: slug → JSON)
+  reviews (a hash: review id → JSON), portfolio projects (a hash: slug → JSON),
+  and passport items (a hash: `<type>-<sourceId>` → JSON)
 
 Each `api/*.ts` function is deliberately self-contained (no shared local
 imports between them) — only npm packages, even where that means a little
@@ -40,6 +44,9 @@ api/portfolio/list.ts                 Public: list projects (falls back to 3 pla
                                        until you save a real one via /admin)
 api/portfolio/save.ts                  Password-gated: create or update a project (by slug)
 api/portfolio/delete.ts                 Password-gated: delete a project
+api/passport/search.ts                   Password-gated: search TMDB / AniList / IGDB / iTunes,
+                                          normalised to one result shape
+api/passport/items.ts                     GET public list; POST (password) save or delete
 
 src/config.ts                  Discord ID, YouTube channel ID, social links — edit this
 src/lib/discord.ts               Lanyard WebSocket client
@@ -47,6 +54,7 @@ src/lib/youtube.ts                 Client-side polling wrapper around /api/youtu
 src/lib/views.ts                     Client-side fetch wrapper around /api/views
 src/lib/reviews.ts                    Client-side fetch/submit wrappers around /api/reviews/*
 src/lib/portfolio.ts                   Client-side fetch wrapper around /api/portfolio/list
+src/lib/passport.ts                     Passport types, fetch wrapper, cover builder
 src/lib/color.ts                         Avatar luminance sampling (light/dark text auto-switch)
 src/lib/time.ts                            Local-time pill math
 src/lib/animate.ts                           Count-up number animation
@@ -55,10 +63,11 @@ src/main.ts        + index.html        Main link-in-bio page
 src/portfolio.ts   + portfolio.html     Portfolio grid, cards link to /project/<slug>
 src/project.ts     + project.html       Project detail + its reviews + submit form
 src/reviews.ts     + reviews.html       Global feed of all approved reviews
+src/passport.ts    + passport.html      Interests passport: Obsession / Currently / All-time
 src/admin.ts       + admin.html         Password-gated: moderate reviews, manage portfolio
                                         projects, stats + CSV export. Not linked anywhere in
                                         the site nav — you just know the URL (/admin).
-src/style.css                          Shared glassmorphism styling for all 6 pages
+src/style.css                          Shared glassmorphism styling for all 7 pages
 ```
 
 ## Setup
@@ -139,6 +148,34 @@ Behind the same password gate as reviews:
 - **A couple of just-for-fun touches**: a confetti burst when you approve a
   review, and clicking the page title 5 times fast triggers a small joke.
   Both respect `prefers-reduced-motion`.
+
+## The passport page (`/passport`)
+
+A note-first "about me" collection of films, shows, anime, manga, games and
+music. Managed from the **Passport** section of `/admin`:
+
+1. Pick a type, search, click the right result.
+2. Write a note (required — the notes are the point of the page).
+3. Choose **Currently** or **All-time**, optionally tick **Make this my
+   Obsession** (only one at a time; featuring a new one un-features the old).
+
+Metadata (title, year/creator, cover URL, source link) is snapshotted into
+Redis when you save, so visitors never trigger third-party API calls. Cover
+images are hotlinked from each provider's CDN (`image.tmdb.org`,
+`s4.anilist.co`, `images.igdb.com`, `*.mzstatic.com`) — the save endpoint only
+accepts covers from those hosts. If a cover link ever dies, the card falls
+back to a lettered tile. Picking something already in the passport opens it
+for editing instead of creating a duplicate.
+
+Cards are tall (2:3) for posters/box art and square for music. Needs
+`TMDB_API_KEY`, `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` (see
+`.env.example`); AniList and iTunes need nothing. The page footer carries
+TMDB's required attribution notice — their guidelines also ask for the TMDB
+logo, which isn't included yet (grab it from their branding page if you
+want to be fully compliant).
+
+The passport uses two functions (`search.ts`, `items.ts`) rather than one per
+action, to keep the deployment's function count down.
 
 ## Notes on the sandbox / dev-container testing
 

@@ -1,6 +1,16 @@
 import "./style.css";
 import type { Project } from "./lib/portfolio";
 import { fetchPortfolio } from "./lib/portfolio";
+import {
+  buildCover,
+  fetchPassport,
+  passportId,
+  TYPE_LABEL,
+  type PassportItem,
+  type PassportSearchResult,
+  type PassportType,
+  type Shelf,
+} from "./lib/passport";
 
 interface Review {
   id: string;
@@ -297,6 +307,7 @@ async function loadAdminData() {
   exportCsvBtn.onclick = () => exportReviewsCsv(reviews);
 
   renderPortfolioAdminList();
+  void refreshPassportAdmin();
 }
 
 async function moderate(id: string, action: "approve" | "reject") {
@@ -416,6 +427,269 @@ portfolioForm.addEventListener("submit", (event) => {
       portfolioFormStatus.textContent = "Could not reach the server.";
       portfolioFormStatus.className = "review-form__status review-form__status--error";
     });
+});
+
+// --- Passport management ---
+
+let passportItems: PassportItem[] = [];
+let pickedResult: PassportSearchResult | null = null;
+let editingPassportId: string | null = null;
+
+const passportListEl = document.getElementById("passport-admin-list")!;
+const passportForm = document.getElementById("passport-form") as HTMLFormElement;
+const passportFormMode = document.getElementById("passport-form-mode")!;
+const passportFormStatus = document.getElementById("passport-form-status")!;
+const passportFormCancel = document.getElementById("passport-form-cancel") as HTMLButtonElement;
+const passportSearchRow = document.getElementById("passport-search-row")!;
+const passportSearchBtn = document.getElementById("passport-search-btn") as HTMLButtonElement;
+const passportResultsEl = document.getElementById("passport-results")!;
+const passportPickedEl = document.getElementById("passport-picked")!;
+
+const passportFields = {
+  type: passportForm.elements.namedItem("type") as HTMLSelectElement,
+  query: passportForm.elements.namedItem("query") as HTMLInputElement,
+  note: passportForm.elements.namedItem("note") as HTMLTextAreaElement,
+  featured: passportForm.elements.namedItem("featured") as HTMLInputElement,
+};
+
+function setPassportStatus(text: string, tone?: "ok" | "error") {
+  passportFormStatus.textContent = text;
+  passportFormStatus.className = `review-form__status${tone ? ` review-form__status--${tone}` : ""}`;
+}
+
+function setShelf(shelf: Shelf) {
+  const radio = passportForm.querySelector<HTMLInputElement>(`input[name="shelf"][value="${shelf}"]`);
+  if (radio) radio.checked = true;
+}
+
+function buildResultText(title: string, subtitle: string): HTMLElement {
+  const text = document.createElement("span");
+  text.style.minWidth = "0";
+  const titleEl = document.createElement("span");
+  titleEl.className = "passport-result__title";
+  titleEl.textContent = title;
+  const subtitleEl = document.createElement("span");
+  subtitleEl.className = "passport-result__subtitle";
+  subtitleEl.textContent = subtitle;
+  text.append(titleEl, subtitleEl);
+  return text;
+}
+
+function showPicked(result: PassportSearchResult) {
+  pickedResult = result;
+  passportPickedEl.replaceChildren(
+    buildCover(result, "passport-picked__cover"),
+    buildResultText(result.title, [TYPE_LABEL[result.type], result.subtitle].filter(Boolean).join(" · ")),
+  );
+  passportPickedEl.hidden = false;
+  passportResultsEl.hidden = true;
+}
+
+function renderSearchResults(results: PassportSearchResult[]) {
+  passportResultsEl.replaceChildren();
+  passportResultsEl.hidden = false;
+
+  if (results.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "reviews-empty";
+    empty.textContent = "No matches — try a different spelling or type.";
+    passportResultsEl.appendChild(empty);
+    return;
+  }
+
+  for (const result of results) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "passport-result";
+    button.setAttribute("role", "option");
+    button.append(buildCover(result, "passport-result__cover"), buildResultText(result.title, result.subtitle));
+    button.addEventListener("click", () => {
+      // Picking something that's already in the passport edits it instead of duplicating.
+      const existing = passportItems.find((item) => item.id === passportId(result));
+      if (existing) {
+        startEditingPassportItem(existing);
+        setPassportStatus("Already in your passport — editing it instead.");
+        return;
+      }
+      showPicked(result);
+      setPassportStatus("");
+      passportFields.note.focus();
+    });
+    passportResultsEl.appendChild(button);
+  }
+}
+
+async function runPassportSearch() {
+  const query = passportFields.query.value.trim();
+  if (!query) return;
+  const type = passportFields.type.value as PassportType;
+
+  setPassportStatus("Searching…");
+  passportSearchBtn.disabled = true;
+  try {
+    const params = new URLSearchParams({ type, q: query });
+    const res = await fetch(`/api/passport/search?${params}`, { headers: authHeaders() });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setPassportStatus(data.error ?? "Search failed.", "error");
+      return;
+    }
+    setPassportStatus("");
+    renderSearchResults(Array.isArray(data.results) ? data.results : []);
+  } catch {
+    setPassportStatus("Could not reach the server.", "error");
+  } finally {
+    passportSearchBtn.disabled = false;
+  }
+}
+
+function renderPassportAdminList() {
+  passportListEl.replaceChildren();
+
+  if (passportItems.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "reviews-empty";
+    empty.textContent = "Nothing in your passport yet.";
+    passportListEl.appendChild(empty);
+    return;
+  }
+
+  for (const item of passportItems) {
+    const row = document.createElement("div");
+    row.className = "admin-review passport-admin-row";
+
+    const text = document.createElement("div");
+    text.className = "passport-admin-row__text";
+    const title = document.createElement("span");
+    title.className = "review-card__name";
+    title.textContent = item.featured ? `★ ${item.title}` : item.title;
+    const meta = document.createElement("span");
+    meta.className = "admin-review__project";
+    meta.textContent = `${TYPE_LABEL[item.type]} · ${item.shelf === "current" ? "Currently" : "All-time"}`;
+    text.append(title, meta);
+
+    const actions = document.createElement("div");
+    actions.className = "admin-review__actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "admin-review__approve";
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", () => startEditingPassportItem(item));
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "admin-review__reject";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", () => {
+      if (window.confirm(`Remove "${item.title}" from your passport?`)) void deletePassportItem(item.id);
+    });
+
+    actions.append(editBtn, deleteBtn);
+    row.append(buildCover(item, "passport-admin-row__cover"), text, actions);
+    passportListEl.appendChild(row);
+  }
+}
+
+async function refreshPassportAdmin() {
+  passportItems = await fetchPassport();
+  renderPassportAdminList();
+}
+
+function startEditingPassportItem(item: PassportItem) {
+  editingPassportId = item.id;
+  passportFormMode.textContent = `Editing "${item.title}"`;
+  passportSearchRow.hidden = true;
+  showPicked({
+    type: item.type,
+    externalId: item.id.slice(item.type.length + 1),
+    title: item.title,
+    subtitle: item.subtitle,
+    cover: item.cover,
+    url: item.url,
+  });
+  passportFields.note.value = item.note;
+  passportFields.featured.checked = item.featured;
+  setShelf(item.shelf);
+  passportFormCancel.hidden = false;
+  passportForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function resetPassportForm() {
+  editingPassportId = null;
+  pickedResult = null;
+  const keepType = passportFields.type.value;
+  passportForm.reset();
+  passportFields.type.value = keepType;
+  passportFormMode.textContent = "Add something";
+  passportSearchRow.hidden = false;
+  passportResultsEl.hidden = true;
+  passportResultsEl.replaceChildren();
+  passportPickedEl.hidden = true;
+  passportPickedEl.replaceChildren();
+  passportFormCancel.hidden = true;
+}
+
+async function deletePassportItem(id: string) {
+  await fetch("/api/passport/items", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ action: "delete", id }),
+  });
+  if (editingPassportId === id) resetPassportForm();
+  await refreshPassportAdmin();
+}
+
+passportSearchBtn.addEventListener("click", () => void runPassportSearch());
+passportFields.query.addEventListener("keydown", (event) => {
+  // Enter in the search box searches — it shouldn't submit the save form.
+  if (event.key === "Enter") {
+    event.preventDefault();
+    void runPassportSearch();
+  }
+});
+passportFormCancel.addEventListener("click", () => {
+  resetPassportForm();
+  setPassportStatus("");
+});
+
+passportForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!pickedResult) {
+    setPassportStatus("Search for something and pick a result first.", "error");
+    return;
+  }
+
+  const formData = new FormData(passportForm);
+  const item = {
+    id: passportId(pickedResult),
+    type: pickedResult.type,
+    title: pickedResult.title,
+    subtitle: pickedResult.subtitle,
+    cover: pickedResult.cover,
+    url: pickedResult.url,
+    note: String(formData.get("note") ?? ""),
+    shelf: (formData.get("shelf") === "alltime" ? "alltime" : "current") as Shelf,
+    featured: passportFields.featured.checked,
+  };
+
+  setPassportStatus("Saving…");
+  void fetch("/api/passport/items", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ action: "save", item }),
+  })
+    .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+    .then(async ({ ok, data }) => {
+      if (!ok) {
+        setPassportStatus(data.error ?? "Could not save.", "error");
+        return;
+      }
+      setPassportStatus("Stamped!", "ok");
+      resetPassportForm();
+      await refreshPassportAdmin();
+    })
+    .catch(() => setPassportStatus("Could not reach the server.", "error"));
 });
 
 unlockForm.addEventListener("submit", (event) => {
