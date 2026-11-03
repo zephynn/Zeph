@@ -6,7 +6,7 @@ per-project detail pages, a moderated client review system, and a Media shelf of
 
 ## Stack
 
-- Vite + TypeScript, no framework — 7 pages built as separate Vite entries
+- Vite + TypeScript, no framework — 6 pages built as separate Vite entries
   (see `vite.config.ts`), not a single-page app
 - `api/youtube.ts` — proxies YouTube Data API v3 so the API key never
   reaches the browser
@@ -45,7 +45,7 @@ api/portfolio/save.ts                  Password-gated: create or update a projec
 api/portfolio/delete.ts                 Password-gated: delete a project
 api/media/search.ts                      Password-gated: search TMDB / AniList / IGDB / iTunes, or
                                           fetch one result's full details (?id=)
-api/media/items.ts                        GET public list or one item (?id=); POST (password)
+api/media/items.ts                        GET public list (or one item, ?id=); POST (password)
                                           save or delete
 
 src/config.ts                  Discord ID, YouTube channel ID, social links — edit this
@@ -55,7 +55,7 @@ src/lib/views.ts                     Client-side fetch wrapper around /api/views
 src/lib/reviews.ts                    Client-side fetch/submit wrappers around /api/reviews/*
 src/lib/portfolio.ts                   Client-side fetch wrapper around /api/portfolio/list
 src/lib/media.ts                        Media types, fetch wrappers, cover/stars/tilt helpers
-src/lib/media-panel.ts                  The home page's Media panel (rows, arrows, #media hash)
+src/lib/media-panel.ts                  The home page's Media panel (rows, flip card, song preview, #media hash)
 src/lib/color.ts                         Avatar luminance sampling (light/dark text auto-switch)
 src/lib/time.ts                            Local-time pill math
 src/lib/animate.ts                           Count-up number animation
@@ -64,11 +64,10 @@ src/main.ts        + index.html        Main link-in-bio page
 src/portfolio.ts   + portfolio.html     Portfolio grid, cards link to /project/<slug>
 src/project.ts     + project.html       Project detail + its reviews + submit form
 src/reviews.ts     + reviews.html       Global feed of all approved reviews
-src/media.ts       + media-item.html    One Media item's page (/media/<type>-<id>)
 src/admin.ts       + admin.html         Password-gated: moderate reviews, manage portfolio
                                         projects, stats + CSV export. Not linked anywhere in
                                         the site nav — you just know the URL (/admin).
-src/style.css                          Shared glassmorphism styling for all 7 pages
+src/style.css                          Shared glassmorphism styling for all 6 pages
 ```
 
 ## Setup
@@ -110,7 +109,7 @@ Lanyard's presence data is fetched directly from the browser
 1. Push this repo to GitHub.
 2. Import it in Vercel (vite is auto-detected; `api/` becomes serverless
    functions automatically, no extra config needed beyond `vercel.json`,
-   which is already checked in for `cleanUrls` + the `/project/:slug` and `/media/:id` rewrites; with
+   which is already checked in for `cleanUrls` + the `/project/:slug` and `/media/:id` rewrite; with
    `cleanUrls` on, rewrite destinations must be the clean path, e.g. `/project`, not `/project.html`).
 3. Add the Upstash integration from Vercel's Marketplace (Storage tab) —
    pick **Redis**, not QStash/Vector/Kafka if those show up too.
@@ -164,14 +163,15 @@ narrower screens get a full-screen sheet. `/#media` opens it directly (and
 - Favourites get a small ★ on the cover and lead their row; everything
   else is newest first. Stars (whole, 1–5) are optional and hidden when
   unrated.
-- Clicking a cover opens a small preview over the shelf with your note (or
-  a few lines of the overview if there's no note) and a **Full page** button.
-  Ctrl/Cmd-click opens the full page straight away.
-- The full page is `/media/<type>-<id>`: the cover, your note
-  ("My take", optional), an About box with the overview and key facts
-  (director, developer, studio, runtime, platforms…), and a link to the
-  source. The background is the cover, blurred, like the avatar on the
-  home page.
+- Clicking a cover flips it: the card lifts out of its row, grows into the
+  middle of the shelf while turning over, and shows the back. The back is
+  about you, not the item: your stars and ★ Favourite, your note, "On my
+  shelf since <month>", and a small link to the source. Its background is
+  the item's own cover, blurred and darkened. Songs also get a play button
+  for Apple's free 30-second preview, which stops when the card flips back.
+  Esc, ✕ or clicking outside flips it back.
+- There's no separate page per item; old `/media/<id>` links redirect to
+  `/#media`.
 
 ### Adding things
 

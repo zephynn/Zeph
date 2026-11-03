@@ -4,15 +4,16 @@
     {
       "source": "/project/:slug",
       "destination": "/project"
-    },
-    {
-      "source": "/media/:id",
-      "destination": "/media-item"
     }
   ],
   "redirects": [
     {
       "source": "/media",
+      "destination": "/#media",
+      "permanent": false
+    },
+    {
+      "source": "/media/:id",
       "destination": "/#media",
       "permanent": false
     }

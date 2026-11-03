@@ -139,11 +139,14 @@
       <div class="media-panel__body" id="media-panel-body">
         <p class="media-panel__status" id="media-panel-status">Loading&hellip;</p>
       </div>
-      <div class="media-peek" id="media-peek" hidden>
-        <div class="media-peek__scrim" id="media-peek-scrim"></div>
-        <section class="media-peek__card" id="media-peek-card" role="dialog" aria-labelledby="media-peek-title"></section>
-      </div>
     </aside>
+
+    <div class="media-flip" id="media-flip" hidden>
+      <div class="media-flip__scrim" id="media-flip-scrim"></div>
+      <div class="media-flip__card" id="media-flip-card" role="dialog" aria-modal="true" aria-labelledby="media-flip-title">
+        <div class="media-flip__inner" id="media-flip-inner"></div>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

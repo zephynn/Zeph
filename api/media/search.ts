@@ -30,6 +30,8 @@ interface MediaDetails extends SearchResult {
   url: string;
   overview: string;
   facts: Array<[string, string]>;
+  /** Songs only: Apple's free 30-second preview clip. */
+  preview?: string;
 }
 
 const TYPES: MediaType[] = ["song", "game", "movie", "show", "anime", "manga"];
@@ -328,6 +330,7 @@ interface ItunesTrack {
   primaryGenreName?: string;
   artworkUrl100?: string;
   trackViewUrl?: string;
+  previewUrl?: string;
 }
 
 // artworkUrl100 is a 100px thumbnail, but Apple's CDN serves any size from the
@@ -358,6 +361,7 @@ async function detailItunes(id: string): Promise<MediaDetails> {
   return {
     ...toSongResult(t),
     url: t.trackViewUrl ?? "",
+    preview: t.previewUrl ?? "",
     overview: "",
     facts: facts(
       ["Artist", t.artistName],

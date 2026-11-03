@@ -1,11 +1,14 @@
-import { attachTilt, buildCover, buildStars, CATEGORIES, fetchMedia, isSquare, prefersReducedMotion, TYPE_LABEL, type MediaItem } from "./media";
+import { attachTilt, buildCover, buildStars, CATEGORIES, fetchMedia, isSquare, prefersReducedMotion, SOURCE_NAME, TYPE_LABEL, type MediaItem } from "./media";
 
 /**
  * The home page's Media panel. Opens from the "Media" row: on wide screens
  * the main card slides left and the panel sits beside it; on narrower ones
  * it slides up as a full-screen sheet. URL hash #media opens it directly,
- * and the back button closes it (so /#media links and the detail page's
- * "Back" both land here).
+ * and the back button closes it.
+ *
+ * Clicking a cover flips it: the card lifts out of its row, grows into the
+ * middle of the panel while turning over, and shows the back (your note,
+ * rating, a song preview). See setupFlip().
  */
 export function setupMediaPanel() {
   const panel = document.getElementById("media-panel")!;
@@ -14,7 +17,7 @@ export function setupMediaPanel() {
   const openBtn = document.getElementById("media-open") as HTMLButtonElement;
   const closeBtn = document.getElementById("media-close") as HTMLButtonElement;
 
-  const peek = setupPeek();
+  const flip = setupFlip(panel);
   let loaded: Promise<void> | null = null;
   let openedByClick = false;
   let hideTimer = 0;
@@ -26,7 +29,7 @@ export function setupMediaPanel() {
         return;
       }
       status.remove();
-      renderRows(body, items, peek.open);
+      renderRows(body, items, flip.open);
       const credit = document.createElement("p");
       credit.className = "media-credit media-panel__credit";
       credit.textContent =
@@ -49,7 +52,7 @@ export function setupMediaPanel() {
       requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add("media-is-open")));
       closeBtn.focus({ preventScroll: true });
     } else {
-      peek.close(false);
+      flip.close({ instant: true });
       document.body.classList.remove("media-is-open");
       hideTimer = window.setTimeout(() => (panel.hidden = true), prefersReducedMotion() ? 0 : 500);
       openBtn.focus({ preventScroll: true });
@@ -85,8 +88,8 @@ export function setupMediaPanel() {
   closeBtn.addEventListener("click", close);
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || !document.body.classList.contains("media-is-open")) return;
-    // Esc closes the note preview first, then the panel.
-    if (peek.isOpen()) peek.close(true);
+    // Esc flips an open card back first, then closes the panel.
+    if (flip.isOpen()) flip.close();
     else close();
   });
 
@@ -94,96 +97,284 @@ export function setupMediaPanel() {
   syncWithHash();
 }
 
-/**
- * The note preview: clicking a cover opens a small card over the panel with
- * your note (or a short overview if there's no note) and a link to the full
- * page. Ctrl/Cmd/middle-click on a cover still opens the full page directly.
- */
-function setupPeek() {
-  const root = document.getElementById("media-peek")!;
-  const card = document.getElementById("media-peek-card")!;
-  const scrim = document.getElementById("media-peek-scrim")!;
-  let returnFocus: HTMLElement | null = null;
-  let hideTimer = 0;
+// --- Flip card ---
 
-  function close(restoreFocus: boolean) {
-    if (root.hidden) return;
-    root.classList.remove("is-shown");
-    window.clearTimeout(hideTimer);
-    hideTimer = window.setTimeout(() => (root.hidden = true), prefersReducedMotion() ? 0 : 220);
-    if (restoreFocus) returnFocus?.focus({ preventScroll: true });
-  }
+type OpenFlip = (item: MediaItem, card: HTMLElement, cover: HTMLElement) => void;
 
-  function open(item: MediaItem, from: HTMLElement) {
-    returnFocus = from;
-    window.clearTimeout(hideTimer);
-    card.replaceChildren(...buildPeekContent(item, () => close(true)));
-    root.hidden = false;
-    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add("is-shown")));
-    card.querySelector<HTMLElement>(".media-peek__close")?.focus({ preventScroll: true });
-  }
+const FLIP_MS = 620;
+const FLIP_EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 
-  scrim.addEventListener("click", () => close(true));
-  return { open, close, isOpen: () => !root.hidden };
+interface Rect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
 }
 
-function buildPeekContent(item: MediaItem, onClose: () => void): HTMLElement[] {
+const rectFrame = (r: Rect): Keyframe => ({ left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+
+function setupFlip(panel: HTMLElement) {
+  const root = document.getElementById("media-flip")!;
+  const card = document.getElementById("media-flip-card")!;
+  const inner = document.getElementById("media-flip-inner")!;
+  const scrim = document.getElementById("media-flip-scrim")!;
+  const audio = new Audio();
+  audio.preload = "none";
+
+  let current: { card: HTMLElement; cover: HTMLElement; listeners: AbortController } | null = null;
+
+  function place(rect: Rect) {
+    Object.assign(card.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px` });
+  }
+
+  /** Centre of the panel. Fixed width; height fits the back's content, capped by the panel. */
+  function targetRect(): Rect {
+    const area = panel.getBoundingClientRect();
+    const width = Math.min(380, area.width - 32);
+    const maxHeight = Math.min(560, area.height - 48);
+    let natural = width;
+    const content = inner.querySelector<HTMLElement>(".media-flip__content");
+    if (content) {
+      const probe = content.cloneNode(true) as HTMLElement;
+      Object.assign(probe.style, {
+        position: "fixed",
+        left: "-9999px",
+        top: "0",
+        width: `${width}px`,
+        height: "auto",
+        overflow: "visible",
+        visibility: "hidden",
+      });
+      document.body.appendChild(probe);
+      natural = probe.scrollHeight;
+      probe.remove();
+    }
+    const height = Math.max(Math.min(width * 0.72, maxHeight), Math.min(natural, maxHeight));
+    return { left: area.left + (area.width - width) / 2, top: area.top + (area.height - height) / 2, width, height };
+  }
+
+  function stopAudio() {
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+  }
+
+  function open(item: MediaItem, sourceCard: HTMLElement, sourceCover: HTMLElement) {
+    if (current) return;
+    // Everything the back attaches to shared objects (the <audio>) is removed on close.
+    const listeners = new AbortController();
+    current = { card: sourceCard, cover: sourceCover, listeners };
+
+    const front = document.createElement("div");
+    front.className = "media-flip__face media-flip__front";
+    front.appendChild(buildCover(item, { eager: true }));
+    inner.replaceChildren(front, buildBack(item, audio, listeners.signal, () => close()));
+
+    const from = sourceCover.getBoundingClientRect();
+    const to = targetRect();
+    place(from);
+    root.hidden = false;
+    sourceCover.style.visibility = "hidden"; // the card "lifts out" of its row
+    requestAnimationFrame(() => root.classList.add("is-shown"));
+
+    if (prefersReducedMotion()) {
+      place(to);
+      inner.style.transform = "rotateY(180deg)";
+    } else {
+      card.animate([rectFrame(from), rectFrame(to)], { duration: FLIP_MS, easing: FLIP_EASE, fill: "forwards" }).finished.then(() => {
+        place(to);
+        card.getAnimations().forEach((a) => a.cancel());
+      }, () => {});
+      inner.animate([{ transform: "rotateY(0deg)" }, { transform: "rotateY(180deg)" }], { duration: FLIP_MS, easing: FLIP_EASE, fill: "forwards" });
+    }
+    window.setTimeout(
+      () => inner.querySelector<HTMLElement>(".media-flip__close")?.focus({ preventScroll: true }),
+      prefersReducedMotion() ? 0 : FLIP_MS * 0.6,
+    );
+  }
+
+  function close({ instant = false } = {}) {
+    if (!current) return;
+    const { card: sourceCard, cover: sourceCover, listeners } = current;
+    listeners.abort();
+    stopAudio();
+    root.classList.remove("is-shown");
+
+    const done = () => {
+      root.hidden = true;
+      sourceCover.style.visibility = "";
+      card.getAnimations().forEach((a) => a.cancel());
+      inner.getAnimations().forEach((a) => a.cancel());
+      inner.style.transform = "";
+      inner.replaceChildren();
+      current = null;
+      if (!instant) sourceCard.focus({ preventScroll: true });
+    };
+
+    if (instant || prefersReducedMotion()) {
+      done();
+      return;
+    }
+    const from = card.getBoundingClientRect();
+    const to = sourceCover.getBoundingClientRect();
+    const duration = FLIP_MS * 0.85;
+    card.getAnimations().forEach((a) => a.cancel());
+    place(from);
+    inner.getAnimations().forEach((a) => a.cancel());
+    card.animate([rectFrame(from), rectFrame(to)], { duration, easing: FLIP_EASE, fill: "forwards" });
+    inner
+      .animate([{ transform: "rotateY(180deg)" }, { transform: "rotateY(360deg)" }], { duration, easing: FLIP_EASE, fill: "forwards" })
+      .finished.then(done, done);
+  }
+
+  scrim.addEventListener("click", () => close());
+  window.addEventListener("resize", () => {
+    if (current) place(targetRect());
+  });
+
+  return { open, close, isOpen: () => current !== null };
+}
+
+function formatSince(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+}
+
+/** The back of a flipped card: about you, not the item. */
+function buildBack(item: MediaItem, audio: HTMLAudioElement, signal: AbortSignal, onClose: () => void): HTMLElement {
+  const back = document.createElement("div");
+  back.className = "media-flip__face media-flip__back";
+
+  // The cover itself, heavily blurred and darkened, so each back looks like its own artwork.
+  if (item.cover) {
+    const tint = document.createElement("div");
+    tint.className = "media-flip__tint";
+    tint.style.backgroundImage = `url("${item.cover}")`;
+    back.appendChild(tint);
+  }
+
+  const content = document.createElement("div");
+  content.className = "media-flip__content";
+
+  const kind = document.createElement("p");
+  kind.className = "media-flip__kind";
+  kind.textContent = [TYPE_LABEL[item.type], item.by, item.year].filter(Boolean).join(" · ");
+
+  const title = document.createElement("h3");
+  title.className = "media-flip__title";
+  title.id = "media-flip-title";
+  title.textContent = item.title;
+
+  content.append(kind, title);
+
+  const mine = document.createElement("div");
+  mine.className = "media-flip__mine";
+  const stars = buildStars(item.rating);
+  if (stars) mine.appendChild(stars);
+  if (item.favourite) mine.append("★ Favourite");
+  if (mine.childNodes.length) content.appendChild(mine);
+
+  if (item.type === "song" && item.preview) content.appendChild(buildPlayer(item.preview, audio, signal));
+
+  const note = document.createElement("div");
+  note.className = "media-flip__note";
+  if (item.note) {
+    for (const para of item.note.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)) {
+      const p = document.createElement("p");
+      p.textContent = para;
+      note.appendChild(p);
+    }
+  } else {
+    const empty = document.createElement("p");
+    empty.className = "media-flip__empty";
+    empty.textContent = "No note on this one yet.";
+    note.appendChild(empty);
+  }
+  content.appendChild(note);
+
+  const foot = document.createElement("div");
+  foot.className = "media-flip__foot";
+  const since = document.createElement("span");
+  since.textContent = `On my shelf since ${formatSince(item.addedAt)}`;
+  foot.appendChild(since);
+  if (item.url) {
+    const source = document.createElement("a");
+    source.href = item.url;
+    source.target = "_blank";
+    source.rel = "noopener noreferrer";
+    source.textContent = `${SOURCE_NAME[item.type]} ↗`;
+    foot.appendChild(source);
+  }
+  content.appendChild(foot);
+
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
-  closeBtn.className = "media-round media-peek__close";
-  closeBtn.setAttribute("aria-label", "Close preview");
+  closeBtn.className = "media-round media-flip__close";
+  closeBtn.setAttribute("aria-label", "Close");
   closeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>`;
   closeBtn.addEventListener("click", onClose);
 
-  const top = document.createElement("div");
-  top.className = "media-peek__top";
-  const coverWrap = document.createElement("div");
-  coverWrap.className = `media-peek__cover${isSquare(item.type) ? " media-peek__cover--square" : ""}`;
-  coverWrap.appendChild(buildCover(item, { eager: true }));
-
-  const heading = document.createElement("div");
-  heading.className = "media-peek__heading";
-  const type = document.createElement("p");
-  type.className = "media-detail__type";
-  type.textContent = [TYPE_LABEL[item.type], item.year].filter(Boolean).join(" · ");
-  const title = document.createElement("h3");
-  title.className = "media-peek__title";
-  title.id = "media-peek-title";
-  title.textContent = item.title;
-  heading.append(type, title);
-  if (item.by) {
-    const by = document.createElement("p");
-    by.className = "media-peek__by";
-    by.textContent = item.by;
-    heading.appendChild(by);
-  }
-  const rating = document.createElement("div");
-  rating.className = "media-detail__rating";
-  const stars = buildStars(item.rating);
-  if (stars) rating.appendChild(stars);
-  if (item.favourite) rating.append("★ Favourite");
-  if (rating.childNodes.length) heading.appendChild(rating);
-  top.append(coverWrap, heading);
-
-  // Your note is the point; with no note, a short overview stands in (muted).
-  const text = document.createElement("div");
-  text.className = item.note ? "media-peek__note" : "media-peek__note media-peek__note--overview";
-  const source = item.note || item.overview;
-  for (const para of source.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)) {
-    const p = document.createElement("p");
-    p.textContent = para;
-    text.appendChild(p);
-  }
-
-  const link = document.createElement("a");
-  link.className = "project-detail__link media-peek__link";
-  link.href = `/media/${encodeURIComponent(item.id)}`;
-  link.textContent = "Full page";
-
-  return text.childElementCount ? [closeBtn, top, text, link] : [closeBtn, top, link];
+  back.append(content, closeBtn);
+  return back;
 }
 
-function renderRows(body: HTMLElement, items: MediaItem[], openPeek: (item: MediaItem, from: HTMLElement) => void) {
+const PLAY_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg>`;
+const PAUSE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="5.5" width="4" height="13" rx="1" fill="currentColor" /><rect x="13.5" y="5.5" width="4" height="13" rx="1" fill="currentColor" /></svg>`;
+
+/** Play/pause for Apple's 30-second clip, with a thin progress bar. One shared <audio>. */
+function buildPlayer(src: string, audio: HTMLAudioElement, signal: AbortSignal): HTMLElement {
+  const player = document.createElement("div");
+  player.className = "media-player";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "media-player__button";
+  const icon = document.createElement("span");
+  icon.className = "media-player__icon";
+  const label = document.createElement("span");
+  button.append(icon, label);
+
+  const bar = document.createElement("span");
+  bar.className = "media-player__bar";
+  bar.setAttribute("aria-hidden", "true");
+  const fill = document.createElement("span");
+  fill.className = "media-player__fill";
+  bar.appendChild(fill);
+
+  const time = document.createElement("span");
+  time.className = "media-player__time";
+
+  const sync = () => {
+    const mine = audio.src === src;
+    const playing = mine && !audio.paused;
+    icon.innerHTML = playing ? PAUSE_ICON : PLAY_ICON;
+    label.textContent = playing ? "Pause" : "Preview";
+    button.setAttribute("aria-label", playing ? "Pause preview" : "Play 30-second preview");
+    const duration = mine && audio.duration ? audio.duration : 30;
+    const elapsed = mine ? audio.currentTime : 0;
+    fill.style.transform = `scaleX(${Math.min(1, elapsed / duration)})`;
+    const left = Math.max(0, Math.ceil(duration - elapsed));
+    time.textContent = `0:${String(left).padStart(2, "0")}`;
+  };
+
+  button.addEventListener("click", () => {
+    if (audio.src !== src) audio.src = src;
+    if (audio.paused) {
+      audio.volume = 0.8;
+      void audio.play().catch(sync);
+    } else {
+      audio.pause();
+    }
+  });
+  for (const event of ["play", "pause", "timeupdate", "ended", "emptied"]) audio.addEventListener(event, sync, { signal });
+  sync();
+
+  player.append(button, bar, time);
+  return player;
+}
+
+// --- Rows ---
+
+function renderRows(body: HTMLElement, items: MediaItem[], openFlip: OpenFlip) {
   for (const [type, label] of CATEGORIES) {
     // Favourites lead each row; otherwise newest first (the API's order).
     const rowItems = items.filter((item) => item.type === type).sort((a, b) => Number(b.favourite) - Number(a.favourite));
@@ -203,17 +394,17 @@ function renderRows(body: HTMLElement, items: MediaItem[], openPeek: (item: Medi
 
     const track = document.createElement("div");
     track.className = "media-row__track";
-    for (const item of rowItems) track.appendChild(buildCard(item, openPeek));
+    for (const item of rowItems) track.appendChild(buildCard(item, openFlip));
 
     section.append(heading, track, ...buildArrows(track, label));
     body.appendChild(section);
   }
 }
 
-function buildCard(item: MediaItem, openPeek: (item: MediaItem, from: HTMLElement) => void): HTMLElement {
-  const card = document.createElement("a");
+function buildCard(item: MediaItem, openFlip: OpenFlip): HTMLElement {
+  const card = document.createElement("button");
+  card.type = "button";
   card.className = `media-card${isSquare(item.type) ? " media-card--square" : ""}`;
-  card.href = `/media/${encodeURIComponent(item.id)}`;
   card.setAttribute("aria-label", `${item.title}${item.by ? ` by ${item.by}` : ""}${item.favourite ? ", favourite" : ""}`);
 
   const cover = buildCover(item, { favourite: item.favourite });
@@ -225,13 +416,7 @@ function buildCard(item: MediaItem, openPeek: (item: MediaItem, from: HTMLElemen
   const stars = buildStars(item.rating);
   if (stars) card.appendChild(stars);
 
-  card.addEventListener("click", (event) => {
-    // Let "open in new tab" gestures go straight to the full page.
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
-    event.preventDefault();
-    openPeek(item, card);
-  });
-
+  card.addEventListener("click", () => openFlip(item, card, cover));
   attachTilt(card, cover);
   return card;
 }

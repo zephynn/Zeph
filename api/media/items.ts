@@ -32,6 +32,7 @@ interface MediaItem {
   note: string;
   rating: number; // 0 = not rated, otherwise 1–5 whole stars
   favourite: boolean;
+  preview: string; // songs only: Apple's 30-second preview clip, else ""
   addedAt: number;
 }
 
@@ -42,6 +43,8 @@ const MAX = { title: 200, by: 200, url: 500, overview: 3000, note: 1500, facts: 
 
 const COVER_HOSTS = ["image.tmdb.org", "s4.anilist.co", "images.igdb.com"];
 const isAllowedCoverHost = (host: string) => COVER_HOSTS.includes(host) || host.endsWith(".mzstatic.com");
+// Apple serves preview clips from audio-ssl.itunes.apple.com (and occasionally mzstatic).
+const isAllowedPreviewHost = (host: string) => host.endsWith(".itunes.apple.com") || host.endsWith(".mzstatic.com");
 
 function isHttpsUrl(value: string, hostCheck?: (host: string) => boolean): boolean {
   try {
@@ -155,6 +158,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const i = (body.item ?? {}) as Record<string, unknown>;
+  i.preview ??= ""; // optional; older admin pages don't send it
   if (
     !isString(i.id, 60) || !ID_PATTERN.test(i.id) ||
     typeof i.type !== "string" || !TYPES.includes(i.type as MediaType) || !i.id.startsWith(`${i.type}-`) ||
@@ -167,7 +171,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     !isFacts(i.facts) ||
     !isString(i.note, MAX.note) ||
     typeof i.rating !== "number" || !Number.isInteger(i.rating) || i.rating < 0 || i.rating > 5 ||
-    typeof i.favourite !== "boolean"
+    typeof i.favourite !== "boolean" ||
+    !isString(i.preview, MAX.url) || (i.preview !== "" && (i.type !== "song" || !isHttpsUrl(i.preview, isAllowedPreviewHost)))
   ) {
     res.status(400).json({ error: "Invalid item. Covers must come from a supported source and ratings are 0–5 whole stars." });
     return;
@@ -189,6 +194,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       note: i.note.trim(),
       rating: i.rating,
       favourite: i.favourite,
+      preview: i.preview,
       // Editing keeps the original "added" date so row order stays stable.
       addedAt: previous?.addedAt ?? Date.now(),
     };

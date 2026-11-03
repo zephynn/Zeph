@@ -13,6 +13,8 @@ export interface MediaItem {
   note: string;
   rating: number; // 0 = not rated, otherwise 1–5
   favourite: boolean;
+  /** Songs only: Apple's 30-second preview clip. Missing on items saved before previews existed. */
+  preview?: string;
   addedAt: number;
 }
 
@@ -66,17 +68,6 @@ export async function fetchMedia(): Promise<MediaItem[]> {
     return Array.isArray(data.items) ? data.items : [];
   } catch {
     return [];
-  }
-}
-
-export async function fetchMediaItem(id: string): Promise<MediaItem | null> {
-  try {
-    const res = await fetch(`/api/media/items?id=${encodeURIComponent(id)}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.item ?? null;
-  } catch {
-    return null;
   }
 }
 

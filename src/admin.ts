@@ -433,7 +433,7 @@ portfolioForm.addEventListener("submit", (event) => {
 
 let mediaItems: MediaItem[] = [];
 /** The full details of whatever is being added or edited (fetched from search.ts ?id=). */
-let pickedMedia: (MediaSearchResult & { url: string; overview: string; facts: Array<[string, string]> }) | null = null;
+let pickedMedia: (MediaSearchResult & { url: string; overview: string; facts: Array<[string, string]>; preview?: string }) | null = null;
 let editingMediaId: string | null = null;
 
 const mediaListEl = document.getElementById("media-admin-list")!;
@@ -574,7 +574,7 @@ function renderMediaAdminList() {
     title.textContent = item.favourite ? `★ ${item.title}` : item.title;
     const meta = document.createElement("span");
     meta.className = "admin-review__project";
-    meta.textContent = [TYPE_LABEL[item.type], item.rating ? `${item.rating}/5` : "", item.note ? "has note" : ""].filter(Boolean).join(" · ");
+    meta.textContent = [TYPE_LABEL[item.type], item.rating ? `${item.rating}/5` : "", item.note ? "has note" : "", item.type === "song" && !item.preview ? "no preview" : ""].filter(Boolean).join(" · ");
     text.append(title, meta);
 
     const actions = document.createElement("div");
@@ -617,6 +617,7 @@ function startEditingMedia(item: MediaItem) {
     url: item.url,
     overview: item.overview,
     facts: item.facts,
+    preview: item.preview,
   };
   mediaFormMode.textContent = `Editing "${item.title}"`;
   mediaSearchRow.hidden = true;
@@ -683,6 +684,7 @@ mediaForm.addEventListener("submit", (event) => {
     url: pickedMedia.url,
     overview: pickedMedia.overview,
     facts: pickedMedia.facts,
+    preview: pickedMedia.preview ?? "",
     note: mediaFields.note.value,
     rating: Number(mediaFields.rating.value) || 0,
     favourite: mediaFields.favourite.checked,
