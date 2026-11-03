@@ -78,6 +78,20 @@ function parseItems(all: Record<string, unknown> | null): MediaItem[] {
     .filter((item): item is MediaItem => item !== null && typeof item.id === "string");
 }
 
+/** Apple's 30-second preview URL for an iTunes track id, or "" if there isn't one. */
+async function lookupSongPreview(trackId: string): Promise<string> {
+  if (!/^\d+$/.test(trackId)) return "";
+  try {
+    const res = await fetch(`https://itunes.apple.com/lookup?id=${trackId}`);
+    if (!res.ok) return "";
+    const data = (await res.json()) as { results?: Array<{ previewUrl?: string }> };
+    const preview = data.results?.[0]?.previewUrl ?? "";
+    return isHttpsUrl(preview, isAllowedPreviewHost) ? preview : "";
+  } catch {
+    return "";
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const kvUrl = process.env.KV_REST_API_URL;
   const kvToken = process.env.KV_REST_API_TOKEN;
@@ -178,6 +192,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  // A song saved without a preview (e.g. from an admin tab opened before
+  // previews existed) gets it looked up here, so no song misses out.
+  if (i.type === "song" && !i.preview) i.preview = await lookupSongPreview(i.id.slice("song-".length));
+
   try {
     const existingRaw = await redis.hget<unknown>(HASH_KEY, i.id);
     const [previous] = parseItems(existingRaw ? { [i.id]: existingRaw } : null);
@@ -194,7 +212,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       note: i.note.trim(),
       rating: i.rating,
       favourite: i.favourite,
-      preview: i.preview,
+      preview: String(i.preview),
       // Editing keeps the original "added" date so row order stays stable.
       addedAt: previous?.addedAt ?? Date.now(),
     };

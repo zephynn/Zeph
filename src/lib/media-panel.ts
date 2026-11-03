@@ -99,7 +99,7 @@ export function setupMediaPanel() {
 
 // --- Flip card ---
 
-type OpenFlip = (item: MediaItem, card: HTMLElement, cover: HTMLElement) => void;
+type OpenFlip = (item: MediaItem, card: HTMLElement, cover: HTMLElement) => void | Promise<void>;
 
 const FLIP_MS = 620;
 const FLIP_EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
@@ -159,15 +159,14 @@ function setupFlip(panel: HTMLElement) {
     audio.load();
   }
 
-  function open(item: MediaItem, sourceCard: HTMLElement, sourceCover: HTMLElement) {
+  async function open(item: MediaItem, sourceCard: HTMLElement, sourceCover: HTMLElement) {
     if (current) return;
     // Everything the back attaches to shared objects (the <audio>) is removed on close.
     const listeners = new AbortController();
     current = { card: sourceCard, cover: sourceCover, listeners };
 
-    const front = document.createElement("div");
-    front.className = "media-flip__face media-flip__front";
-    front.appendChild(buildCover(item, { eager: true }));
+    const front = await buildFront(item);
+    if (current?.listeners !== listeners) return; // closed while the image was decoding
     inner.replaceChildren(front, buildBack(item, audio, listeners.signal, () => close()));
 
     const from = sourceCover.getBoundingClientRect();
@@ -233,6 +232,31 @@ function setupFlip(panel: HTMLElement) {
   });
 
   return { open, close, isOpen: () => current !== null };
+}
+
+/**
+ * The front while it flips: the cover at its true shape (never re-cropped as
+ * the card grows) over its own blurred artwork, which fills the extra space.
+ * Waits for the image to decode so the first frame isn't a blank tile.
+ */
+async function buildFront(item: MediaItem): Promise<HTMLElement> {
+  const front = document.createElement("div");
+  front.className = "media-flip__face media-flip__front";
+  if (!item.cover) {
+    front.appendChild(buildCover(item, { eager: true }));
+    return front;
+  }
+  const tint = document.createElement("div");
+  tint.className = "media-flip__tint";
+  tint.style.backgroundImage = `url("${item.cover}")`;
+  const art = new Image();
+  art.className = "media-flip__art";
+  art.alt = "";
+  art.referrerPolicy = "no-referrer";
+  art.src = item.cover; // already in the browser cache from the row
+  await art.decode().catch(() => {});
+  front.append(tint, art);
+  return front;
 }
 
 function formatSince(timestamp: number): string {
@@ -416,7 +440,7 @@ function buildCard(item: MediaItem, openFlip: OpenFlip): HTMLElement {
   const stars = buildStars(item.rating);
   if (stars) card.appendChild(stars);
 
-  card.addEventListener("click", () => openFlip(item, card, cover));
+  card.addEventListener("click", () => void openFlip(item, card, cover));
   attachTilt(card, cover);
   return card;
 }

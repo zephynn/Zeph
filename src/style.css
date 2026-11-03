@@ -2026,14 +2026,31 @@ body.media-is-open .media-panel {
   inset: 0;
   border-radius: 22px;
   overflow: hidden;
+  /* overflow + border-radius alone stops clipping once an element is
+     rotating in 3D (Chrome/Safari), so the corners are clipped this way. */
+  clip-path: inset(0 round 22px);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+}
+
+.media-flip__front {
+  background: #17110f;
 }
 
 .media-flip__front .media-cover {
   height: 100%;
   aspect-ratio: auto;
   border-radius: inherit;
+}
+
+/* The cover keeps its own shape while the card grows (contain, not cover),
+   so it scales smoothly instead of being re-cropped every frame. */
+.media-flip__art {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .media-flip__back {
