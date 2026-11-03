@@ -3,11 +3,11 @@
   "rewrites": [
     {
       "source": "/project/:slug",
-      "destination": "/project.html"
+      "destination": "/project"
     },
     {
       "source": "/media/:id",
-      "destination": "/media.html"
+      "destination": "/media-item"
     }
   ],
   "redirects": [

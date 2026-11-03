@@ -64,7 +64,7 @@ src/main.ts        + index.html        Main link-in-bio page
 src/portfolio.ts   + portfolio.html     Portfolio grid, cards link to /project/<slug>
 src/project.ts     + project.html       Project detail + its reviews + submit form
 src/reviews.ts     + reviews.html       Global feed of all approved reviews
-src/media.ts       + media.html         One Media item's page (/media/<type>-<id>)
+src/media.ts       + media-item.html    One Media item's page (/media/<type>-<id>)
 src/admin.ts       + admin.html         Password-gated: moderate reviews, manage portfolio
                                         projects, stats + CSV export. Not linked anywhere in
                                         the site nav — you just know the URL (/admin).
@@ -110,7 +110,8 @@ Lanyard's presence data is fetched directly from the browser
 1. Push this repo to GitHub.
 2. Import it in Vercel (vite is auto-detected; `api/` becomes serverless
    functions automatically, no extra config needed beyond `vercel.json`,
-   which is already checked in for `cleanUrls` + the `/project/:slug` and `/media/:id` rewrites).
+   which is already checked in for `cleanUrls` + the `/project/:slug` and `/media/:id` rewrites; with
+   `cleanUrls` on, rewrite destinations must be the clean path, e.g. `/project`, not `/project.html`).
 3. Add the Upstash integration from Vercel's Marketplace (Storage tab) —
    pick **Redis**, not QStash/Vector/Kafka if those show up too.
 4. Set the env vars from `.env.example` in the Vercel project.
@@ -163,7 +164,10 @@ narrower screens get a full-screen sheet. `/#media` opens it directly (and
 - Favourites get a small ★ on the cover and lead their row; everything
   else is newest first. Stars (whole, 1–5) are optional and hidden when
   unrated.
-- Clicking a cover opens `/media/<type>-<id>`: the cover, your note
+- Clicking a cover opens a small preview over the shelf with your note (or
+  a few lines of the overview if there's no note) and a **Full page** button.
+  Ctrl/Cmd-click opens the full page straight away.
+- The full page is `/media/<type>-<id>`: the cover, your note
   ("My take", optional), an About box with the overview and key facts
   (director, developer, studio, runtime, platforms…), and a link to the
   source. The background is the cover, blurred, like the avatar on the
