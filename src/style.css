@@ -90,12 +90,38 @@ a {
   overflow-x: hidden;
 }
 
+/* --- First paint --- */
+/* Content waits (invisible) until the background and avatar are ready, then
+   fades in as one piece — see "First paint" in main.ts. The fallback
+   animation reveals it anyway if the script never runs. */
+body.is-booting .content {
+  opacity: 0;
+  animation: boot-fallback 0s 3s forwards;
+}
+
+body.is-booting .blobs {
+  opacity: 0;
+}
+
+/* Nothing is visible yet, so swaps made while booting (placeholder → real
+   avatar) happen instantly rather than still fading when the page appears. */
+body.is-booting .avatar {
+  transition: none;
+}
+
+@keyframes boot-fallback {
+  to {
+    opacity: 1;
+  }
+}
+
 /* --- Background blobs --- */
 
 .blobs {
   position: fixed;
   inset: 0;
   z-index: 0;
+  transition: opacity 900ms ease;
   overflow: hidden;
   pointer-events: none;
 }
@@ -475,6 +501,7 @@ html.lg-refract .activity {
 .content {
   position: relative;
   z-index: 1;
+  transition: opacity 450ms ease;
   max-width: 480px;
   margin: 0 auto;
   padding: 92px 24px 40px;
@@ -1718,12 +1745,17 @@ body.media-is-open .media-panel {
 /* Wide screens: the card slides left and the panel sits beside it. The card
    is ~510px wide once .content__center's 1.18 zoom applies. */
 @media (min-width: 1200px) {
+  /* Slides with `left`, not a transform: a transform on .content makes Chrome
+     drop or misplace the backdrop blur of the tilted cards inside it (rows
+     going blank while the panel is open). Same reason .content__center uses
+     zoom instead of scale. */
   .content {
-    transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+    left: 0;
+    transition: opacity 450ms ease, left 520ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   body.media-is-open .content {
-    transform: translateX(calc(-50vw + 300px));
+    left: calc(-50vw + 300px);
   }
 
   .media-panel {

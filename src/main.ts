@@ -34,6 +34,51 @@ const statusDotEl = document.getElementById("status-dot")!;
 const statusBubbleEl = document.getElementById("status-bubble")!;
 const activitiesEl = document.getElementById("activities")!;
 
+// --- First paint ---
+// The page starts hidden (body.is-booting) so visitors never see the grey
+// placeholder background, the "Z" avatar or white-on-light text while
+// presence loads. It's revealed once the background and avatar are both in,
+// or after a short timeout so a slow network never leaves it blank.
+
+const BOOT_TIMEOUT_MS = 1500;
+let bootBgReady = false;
+let bootAvatarReady = false;
+
+function reveal() {
+  if (!document.body.classList.contains("is-booting")) return;
+  // Wait a frame so swaps made just now (placeholder → avatar) are painted in
+  // their final state first, instead of fading while the page appears.
+  requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove("is-booting")));
+}
+
+function maybeReveal() {
+  if (bootBgReady && bootAvatarReady) reveal();
+}
+
+window.setTimeout(reveal, BOOT_TIMEOUT_MS);
+
+// The last background is remembered so returning visitors get the right
+// colours instantly (the image is usually in the browser cache already).
+const BG_CACHE_KEY = "zeph:last-bg";
+
+function readCachedBg(): { url: string; dark: boolean } | null {
+  try {
+    const raw = localStorage.getItem(BG_CACHE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return typeof parsed?.url === "string" ? { url: parsed.url, dark: Boolean(parsed.dark) } : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedBg(url: string, dark: boolean) {
+  try {
+    localStorage.setItem(BG_CACHE_KEY, JSON.stringify({ url, dark }));
+  } catch {
+    // storage blocked (private mode etc.) — just skip the cache
+  }
+}
+
 // --- Background: blurred art from whatever you're doing, otherwise the pfp ---
 // Priority: Spotify album art → the current game/app's artwork (or its icon)
 // → the pfp. Two stacked layers: the new image loads into the hidden one,
@@ -43,6 +88,35 @@ const bgLayers = [bgAvatarEl, document.getElementById("bg-avatar-2")!];
 let activeBgLayer = 0;
 let lastBgKey = "";
 
+function applyBackground(url: string, dark: boolean) {
+  const next = 1 - activeBgLayer;
+  const layer = bgLayers[next];
+  layer.style.backgroundImage = `url("${url}")`;
+  // While the page is still hidden there's nothing to crossfade from, so the
+  // first background appears instantly instead of fading up from grey.
+  if (document.body.classList.contains("is-booting")) {
+    layer.style.transition = "none";
+    requestAnimationFrame(() => requestAnimationFrame(() => layer.style.removeProperty("transition")));
+  }
+  layer.classList.add("is-active");
+  bgLayers[activeBgLayer].classList.remove("is-active");
+  activeBgLayer = next;
+  document.body.classList.add("has-avatar-bg");
+  document.body.classList.toggle("dark-bg-text", dark);
+  bootBgReady = true;
+  maybeReveal();
+}
+
+// Show the remembered background right away; live presence replaces it if different.
+const cachedBg = readCachedBg();
+if (cachedBg) {
+  const img = new Image();
+  img.onload = () => {
+    if (!lastBgKey) applyBackground(cachedBg.url, cachedBg.dark);
+  };
+  img.src = cachedBg.url;
+}
+
 /** Tries each URL in order and shows the first one that loads. */
 function setBackground(urls: string[]) {
   const key = urls.join("|");
@@ -51,7 +125,12 @@ function setBackground(urls: string[]) {
 
   const tryAt = (index: number) => {
     const url = urls[index];
-    if (!url) return; // nothing loaded; keep whatever is showing
+    if (!url) {
+      // nothing loaded; keep whatever is showing
+      bootBgReady = true;
+      maybeReveal();
+      return;
+    }
     // Preload first so the crossfade never fades in a blank layer.
     const img = new Image();
     img.onerror = () => {
@@ -59,15 +138,13 @@ function setBackground(urls: string[]) {
     };
     img.onload = () => {
       if (key !== lastBgKey) return; // a newer background was requested meanwhile
-      const next = 1 - activeBgLayer;
-      bgLayers[next].style.backgroundImage = `url("${url}")`;
-      bgLayers[next].classList.add("is-active");
-      bgLayers[activeBgLayer].classList.remove("is-active");
-      activeBgLayer = next;
-      document.body.classList.add("has-avatar-bg");
-
+      // Work out the text colour first, then swap background and text together,
+      // so light text never sits on the old light background (or vice versa).
       void estimateLuminance(url).then((luminance) => {
-        if (key === lastBgKey) document.body.classList.toggle("dark-bg-text", luminance < 0.45);
+        if (key !== lastBgKey) return;
+        const dark = luminance < 0.45;
+        applyBackground(url, dark);
+        writeCachedBg(url, dark);
       });
     };
     img.src = url;
@@ -349,7 +426,8 @@ window.setInterval(tickTimers, 1000);
 // --- Discord presence ---
 
 function renderDiscord(data: LanyardData) {
-  avatarEl.src = discordAvatarUrl(data.discord_user, 128);
+  const avatarUrl = discordAvatarUrl(data.discord_user, 128);
+  if (avatarEl.getAttribute("src") !== avatarUrl) avatarEl.src = avatarUrl;
   avatarEl.alt = data.discord_user.global_name || data.discord_user.username;
   avatarEl.classList.remove("is-hidden");
   avatarPlaceholderEl.classList.add("is-hidden");
@@ -368,6 +446,13 @@ function renderDiscord(data: LanyardData) {
 avatarEl.addEventListener("error", () => {
   avatarEl.classList.add("is-hidden");
   avatarPlaceholderEl.classList.remove("is-hidden");
+  bootAvatarReady = true;
+  maybeReveal();
+});
+
+avatarEl.addEventListener("load", () => {
+  bootAvatarReady = true;
+  maybeReveal();
 });
 
 const presence = createPresenceSource(config.discord.userId, config.discord.presenceUrl);
