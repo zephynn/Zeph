@@ -45,6 +45,7 @@ export function setupMediaPanel() {
     window.clearTimeout(hideTimer);
     openBtn.setAttribute("aria-expanded", String(open));
 
+    document.body.classList.remove("media-is-closing");
     if (open) {
       void load();
       panel.hidden = false;
@@ -54,7 +55,15 @@ export function setupMediaPanel() {
     } else {
       flip.close({ instant: true });
       document.body.classList.remove("media-is-open");
-      hideTimer = window.setTimeout(() => (panel.hidden = true), prefersReducedMotion() ? 0 : 500);
+      // Keeps the cursor tilt off until the card has slid back (see style.css).
+      document.body.classList.add("media-is-closing");
+      hideTimer = window.setTimeout(
+        () => {
+          panel.hidden = true;
+          document.body.classList.remove("media-is-closing");
+        },
+        prefersReducedMotion() ? 0 : 520,
+      );
       openBtn.focus({ preventScroll: true });
     }
   }

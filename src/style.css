@@ -1763,8 +1763,13 @@ body.media-is-open .media-panel {
      GPUs) stops drawing the blurred rows inside a 3D-tilted card in the
      zoomed column — TikTok and Media went blank. */
   body.media-is-open .groups,
-  body.media-is-open .activities {
+  body.media-is-open .activities,
+  body.media-is-closing .groups,
+  body.media-is-closing .activities {
     transform: none;
+    /* Flatten instantly: easing out of the tilt while the panel slides in
+       still made the rows flash. Stays flat until the closing slide ends. */
+    transition: none;
   }
 
   .media-panel {
