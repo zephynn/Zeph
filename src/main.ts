@@ -34,43 +34,64 @@ const statusDotEl = document.getElementById("status-dot")!;
 const statusBubbleEl = document.getElementById("status-bubble")!;
 const activitiesEl = document.getElementById("activities")!;
 
-// --- Background: blurred album art while Spotify plays, otherwise the pfp ---
-// Two stacked layers: the new image loads into the hidden one, then they
-// swap opacity, so switching between pfp and album art fades instead of jumping.
+// --- Background: blurred art from whatever you're doing, otherwise the pfp ---
+// Priority: Spotify album art → the current game/app's artwork (or its icon)
+// → the pfp. Two stacked layers: the new image loads into the hidden one,
+// then they swap opacity, so every switch fades instead of jumping.
 
 const bgLayers = [bgAvatarEl, document.getElementById("bg-avatar-2")!];
 let activeBgLayer = 0;
-let lastBgUrl = "";
+let lastBgKey = "";
 
-function setBackground(url: string) {
-  if (url === lastBgUrl) return;
-  lastBgUrl = url;
+/** Tries each URL in order and shows the first one that loads. */
+function setBackground(urls: string[]) {
+  const key = urls.join("|");
+  if (key === lastBgKey) return;
+  lastBgKey = key;
 
-  // Preload first so the crossfade never fades in a blank layer.
-  const img = new Image();
-  img.onload = () => {
-    if (url !== lastBgUrl) return; // a newer background was requested meanwhile
-    const next = 1 - activeBgLayer;
-    bgLayers[next].style.backgroundImage = `url(${url})`;
-    bgLayers[next].classList.add("is-active");
-    bgLayers[activeBgLayer].classList.remove("is-active");
-    activeBgLayer = next;
-    document.body.classList.add("has-avatar-bg");
+  const tryAt = (index: number) => {
+    const url = urls[index];
+    if (!url) return; // nothing loaded; keep whatever is showing
+    // Preload first so the crossfade never fades in a blank layer.
+    const img = new Image();
+    img.onerror = () => {
+      if (key === lastBgKey) tryAt(index + 1);
+    };
+    img.onload = () => {
+      if (key !== lastBgKey) return; // a newer background was requested meanwhile
+      const next = 1 - activeBgLayer;
+      bgLayers[next].style.backgroundImage = `url("${url}")`;
+      bgLayers[next].classList.add("is-active");
+      bgLayers[activeBgLayer].classList.remove("is-active");
+      activeBgLayer = next;
+      document.body.classList.add("has-avatar-bg");
+
+      void estimateLuminance(url).then((luminance) => {
+        if (key === lastBgKey) document.body.classList.toggle("dark-bg-text", luminance < 0.45);
+      });
+    };
+    img.src = url;
   };
-  img.src = url;
-
-  void estimateLuminance(url).then((luminance) => {
-    if (url === lastBgUrl) document.body.classList.toggle("dark-bg-text", luminance < 0.45);
-  });
+  tryAt(0);
 }
 
 function renderBackground(data: LanyardData) {
-  // While Spotify is playing, the background becomes the album art;
-  // otherwise it's the pfp. setBackground crossfades between them.
-  const albumArt = data.listening_to_spotify ? data.spotify?.album_art_url : null;
+  const urls: (string | null | undefined)[] = [];
+
+  if (data.listening_to_spotify) urls.push(data.spotify?.album_art_url);
+
+  // First non-Spotify activity (games, apps, streams), skipping the custom status.
+  const activity = data.activities.find((a) => a.type !== 4 && !(a.type === 2 && a.name === "Spotify"));
+  if (activity) {
+    urls.push(activityAssetUrl(activity, activity.assets?.large_image));
+    if (activity.application_id) urls.push(`/api/app-icon?id=${activity.application_id}`);
+  }
+
   // Larger pfp source for the background blur — blur washes out detail
   // anyway, so a bigger fetch just avoids visible banding once scaled up.
-  setBackground(albumArt || discordAvatarUrl(data.discord_user, 512));
+  urls.push(discordAvatarUrl(data.discord_user, 512));
+
+  setBackground(urls.filter((u): u is string => Boolean(u)));
 }
 
 // --- Avatar decoration ---
