@@ -445,6 +445,18 @@ html.lg-refract .activity {
   -webkit-backdrop-filter: blur(var(--glass-blur)) url(#lg-refract) saturate(var(--glass-saturate));
 }
 
+/* While the Media panel is open the page is already carrying a big blurred
+   panel full of artwork. The refraction pass is the most expensive part of
+   the glass, so the card beside the panel goes back to plain frosted glass
+   to stay well inside Chrome's GPU budget (rows went blank otherwise). */
+html.lg-refract body.media-is-open .group,
+html.lg-refract body.media-is-open .pill,
+html.lg-refract body.media-is-open .status-bubble,
+html.lg-refract body.media-is-open .activity {
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
 /* --- Liquid Glass: accessibility fallback --- */
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
@@ -1942,7 +1954,12 @@ body.media-is-open .media-panel {
   background: linear-gradient(135deg, #d4d4d8, #a1a1aa);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
-  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  /* No 3D transform at rest: a resting rotateX(0) still makes Chrome give
+     every cover its own GPU layer. With ~50 covers plus the page's glass,
+     that blew the GPU budget and Chrome stopped drawing parts of the main
+     card (rows going blank while Media was open). Only the hovered cover
+     tilts — see the hover rule below. */
+  transform: none;
   transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease;
 }
 
@@ -2000,6 +2017,7 @@ body.media-is-open .media-panel {
 
 @media (hover: hover) and (pointer: fine) {
   .media-card:hover .media-cover {
+    transform: rotateX(var(--rx)) rotateY(var(--ry));
     transition: transform 90ms linear, box-shadow 200ms ease;
     box-shadow: var(--glass-shadow-hover);
   }

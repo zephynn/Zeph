@@ -13,7 +13,7 @@ import {
 } from "./lib/discord";
 import { watchYoutubeStats, formatCount } from "./lib/youtube";
 import { describeLocalTime } from "./lib/time";
-import { estimateLuminance, dominantAccent } from "./lib/color";
+import { luminanceOf, dominantAccent } from "./lib/color";
 import { animateCount } from "./lib/animate";
 import { fetchViewCount } from "./lib/views";
 import { setupMediaPanel } from "./lib/media-panel";
@@ -59,7 +59,7 @@ window.setTimeout(reveal, BOOT_TIMEOUT_MS);
 
 // The last background is remembered so returning visitors get the right
 // colours instantly (the image is usually in the browser cache already).
-const BG_CACHE_KEY = "zeph:last-bg";
+const BG_CACHE_KEY = "zeph:last-bg:v2";
 
 function readCachedBg(): { url: string; dark: boolean } | null {
   try {
@@ -117,13 +117,16 @@ if (cachedBg) {
   img.src = cachedBg.url;
 }
 
+/** Above this average brightness the background counts as light and gets dark text. */
+const LIGHT_BG_THRESHOLD = 0.62;
+
 /** Tries each URL in order and shows the first one that loads. */
 function setBackground(urls: string[]) {
   const key = urls.join("|");
   if (key === lastBgKey) return;
   lastBgKey = key;
 
-  const tryAt = (index: number) => {
+  const tryAt = (index: number, cors = true) => {
     const url = urls[index];
     if (!url) {
       // nothing loaded; keep whatever is showing
@@ -131,21 +134,25 @@ function setBackground(urls: string[]) {
       maybeReveal();
       return;
     }
-    // Preload first so the crossfade never fades in a blank layer.
+    // One CORS load serves both the crossfade preload and the brightness
+    // check. (A separate second request could be answered from cache without
+    // CORS headers, silently failing the check and picking dark text.)
     const img = new Image();
+    if (cors) img.crossOrigin = "anonymous";
     img.onerror = () => {
-      if (key === lastBgKey) tryAt(index + 1);
+      if (key !== lastBgKey) return;
+      // The host may not allow CORS: show the image anyway, just unmeasured.
+      if (cors) tryAt(index, false);
+      else tryAt(index + 1);
     };
     img.onload = () => {
       if (key !== lastBgKey) return; // a newer background was requested meanwhile
-      // Work out the text colour first, then swap background and text together,
-      // so light text never sits on the old light background (or vice versa).
-      void estimateLuminance(url).then((luminance) => {
-        if (key !== lastBgKey) return;
-        const dark = luminance < 0.45;
-        applyBackground(url, dark);
-        writeCachedBg(url, dark);
-      });
+      const luminance = cors ? luminanceOf(img) : null;
+      // Light text (it has a shadow) unless the background is clearly light.
+      // Unmeasurable images get light text too: blurred art is usually mid-toned.
+      const dark = luminance === null || luminance < LIGHT_BG_THRESHOLD;
+      applyBackground(url, dark);
+      writeCachedBg(url, dark);
     };
     img.src = url;
   };

@@ -1,44 +1,30 @@
 /**
- * Samples a small downscaled copy of the image to estimate average
- * perceived luminance (0 = black, 1 = white). Used to decide whether the
- * page should flip to light-on-dark text for a dark/saturated avatar.
- * Resolves to 1 (assume light) if the image fails to load or the canvas
- * read is blocked (e.g. no CORS headers), which keeps the default light
- * theme rather than guessing wrong.
+ * Average perceived luminance (0 = black, 1 = white) of an already-loaded
+ * image, measured the way the page shows it: the background layer is drawn
+ * with saturate(160%), so the sample gets the same boost. Returns null if the
+ * pixels can't be read (image loaded without CORS permission).
  */
-export function estimateLuminance(imageUrl: string): Promise<number> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
+export function luminanceOf(img: HTMLImageElement): number | null {
+  try {
+    const size = 16;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.filter = "saturate(160%)"; // ignored where unsupported; the plain average is close enough
+    ctx.drawImage(img, 0, 0, size, size);
+    const { data } = ctx.getImageData(0, 0, size, size);
 
-    img.onload = () => {
-      try {
-        const size = 16;
-        const canvas = document.createElement("canvas");
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          resolve(1);
-          return;
-        }
-        ctx.drawImage(img, 0, 0, size, size);
-        const { data } = ctx.getImageData(0, 0, size, size);
-
-        let total = 0;
-        const pixelCount = data.length / 4;
-        for (let i = 0; i < data.length; i += 4) {
-          total += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
-        }
-        resolve(total / pixelCount / 255);
-      } catch {
-        resolve(1);
-      }
-    };
-
-    img.onerror = () => resolve(1);
-    img.src = imageUrl;
-  });
+    let total = 0;
+    const pixelCount = data.length / 4;
+    for (let i = 0; i < data.length; i += 4) {
+      total += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+    }
+    return total / pixelCount / 255;
+  } catch {
+    return null;
+  }
 }
 
 /**
