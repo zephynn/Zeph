@@ -445,18 +445,6 @@ html.lg-refract .activity {
   -webkit-backdrop-filter: blur(var(--glass-blur)) url(#lg-refract) saturate(var(--glass-saturate));
 }
 
-/* While the Media panel is open the page is already carrying a big blurred
-   panel full of artwork. The refraction pass is the most expensive part of
-   the glass, so the card beside the panel goes back to plain frosted glass
-   to stay well inside Chrome's GPU budget (rows went blank otherwise). */
-html.lg-refract body.media-is-open .group,
-html.lg-refract body.media-is-open .pill,
-html.lg-refract body.media-is-open .status-bubble,
-html.lg-refract body.media-is-open .activity {
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-}
-
 /* --- Liquid Glass: accessibility fallback --- */
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
@@ -1768,6 +1756,15 @@ body.media-is-open .media-panel {
 
   body.media-is-open .content {
     left: calc(-50vw + 300px);
+  }
+
+  /* No cursor tilt while the panel is open. The cursor is then far to the
+     right, so the cards would sit at their full 3D tilt, and Chrome (on real
+     GPUs) stops drawing the blurred rows inside a 3D-tilted card in the
+     zoomed column — TikTok and Media went blank. */
+  body.media-is-open .groups,
+  body.media-is-open .activities {
+    transform: none;
   }
 
   .media-panel {
