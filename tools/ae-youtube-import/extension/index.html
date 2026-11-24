@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>YouTube Import</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="row">
+    <input id="url" type="text" placeholder="Paste a YouTube link…" spellcheck="false" autocomplete="off">
+    <button id="go" class="primary">Download</button>
+  </div>
+
+  <button id="pasteGo" class="wide">Paste &amp; Download</button>
+
+  <div class="row">
+    <select id="quality">
+      <option value="1080">Best (H.264, up to 1080p)</option>
+      <option value="720">720p (H.264)</option>
+      <option value="audio">Audio only (M4A)</option>
+    </select>
+  </div>
+
+  <div class="row">
+    <span id="folder" class="path" title=""></span>
+    <button id="folderBtn">Folder…</button>
+  </div>
+
+  <div class="bar"><div id="fill"></div></div>
+  <div class="row">
+    <span id="status">Paste a link to get started.</span>
+    <button id="cancel" hidden>Cancel</button>
+  </div>
+
+  <details id="setup">
+    <summary>Setup</summary>
+    <div class="tool"><span>yt-dlp</span><span id="ytdlpPath" class="path"></span><button id="setYtdlp">Set…</button></div>
+    <div class="tool"><span>ffmpeg</span><span id="ffmpegPath" class="path"></span><button id="setFfmpeg">Set…</button></div>
+    <button id="update" class="wide">Update yt-dlp</button>
+  </details>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

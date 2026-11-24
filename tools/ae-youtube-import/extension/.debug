@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lets you inspect the panel at http://localhost:8099 in Chrome if something breaks. -->
+<ExtensionList>
+  <Extension Id="com.zeph.youtubeimport.panel">
+    <HostList>
+      <Host Name="AEFT" Port="8099" />
+    </HostList>
+  </Extension>
+</ExtensionList>

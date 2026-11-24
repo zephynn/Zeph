@@ -1,14 +1,17 @@
-# YouTube Import (After Effects panel)
+# YouTube Import (After Effects extension)
 
-Paste a YouTube link, press Enter. The video downloads, gets imported into a
-`YouTube Downloads` folder in your project, and drops onto the open comp at the
-playhead. If no comp is open, it makes one that matches the video.
+A dockable After Effects panel. Paste a YouTube link and it downloads the video,
+imports it into a `YouTube Downloads` folder in your project, and drops it onto
+the open comp at the playhead. If no comp is open, it makes one that matches the video.
 
-## 1. Install the tools it uses
+- Pasting a link into the box starts the download right away (Enter / **Download** also work).
+- **Paste & Download** grabs the link from your clipboard in one click.
+- Live progress bar and a **Cancel** button. After Effects stays usable while it downloads.
+- Ctrl/Cmd+Z undoes the import.
 
-The panel uses **yt-dlp** for the download and **ffmpeg** to join the video and audio.
+## 1. Install yt-dlp and ffmpeg
 
-**Windows** (easiest):
+**Windows**
 
 ```bash
 winget install yt-dlp.yt-dlp
@@ -18,51 +21,56 @@ winget install yt-dlp.yt-dlp
 winget install Gyan.FFmpeg
 ```
 
-Or download `yt-dlp.exe` (from github.com/yt-dlp/yt-dlp/releases) and `ffmpeg.exe`
-and put both in the same folder as `YouTube Import.jsx`.
+```bash
+winget install DenoLand.Deno
+```
 
-**macOS**:
+**macOS** (needs Homebrew)
 
 ```bash
 brew install yt-dlp ffmpeg deno
 ```
 
-**Deno**: newer yt-dlp versions need a JavaScript runtime for full YouTube support.
-If downloads fail or only find low-quality formats, install Deno (`winget install DenoLand.Deno` / `brew install deno`).
+Deno is a JavaScript runtime that newer yt-dlp versions use to handle YouTube. Without it, some videos may fail or only show low-quality formats.
 
-## 2. Install the panel
+You can instead put `yt-dlp(.exe)` and `ffmpeg(.exe)` inside `extension/bin/` before installing.
 
-Copy `YouTube Import.jsx` to:
+## 2. Install the extension
 
-- Windows: `C:\Program Files\Adobe\Adobe After Effects <version>\Support Files\Scripts\ScriptUI Panels\`
-- macOS: `/Applications/Adobe After Effects <version>/Scripts/ScriptUI Panels/`
+- **Windows**: double-click `install-windows.bat`
+- **macOS**: double-click `install-mac.command` (if macOS blocks it: right-click → Open)
 
-Restart After Effects, then open **Window > YouTube Import.jsx** and dock it.
+The installer copies `extension/` into your user's CEP extensions folder and turns on
+`PlayerDebugMode`, which After Effects requires before it will load an extension that isn't signed.
 
-Turn on **Settings > Scripting & Expressions > Allow Scripts to Write Files and Access Network**.
+Restart After Effects, then open **Window → Extensions → YouTube Import** and dock it.
 
-If the panel says yt-dlp/ffmpeg wasn't found, click **Set yt-dlp…** / **Set ffmpeg…** and point at them once. It remembers.
-
-## Using it
-
-- Paste link → Enter (or **Download**). After Effects stays usable while it downloads.
-- **Quality**: Best (up to 1080p), 720p, or Audio only.
-- **Folder…** picks where files are saved.
-- **Update yt-dlp**: YouTube breaks yt-dlp every few weeks. If downloads suddenly fail, click this first.
-  (Homebrew/winget installs: run `brew upgrade yt-dlp` or `winget upgrade yt-dlp.yt-dlp` instead.)
-- Ctrl/Cmd+Z undoes the import.
+If the **Setup** section says yt-dlp or ffmpeg is "not found", click **Set…** and point at the file. It remembers.
 
 ## Why max 1080p?
 
-After Effects can't import VP9/AV1 video, which is what YouTube uses for 1440p and 4K.
-YouTube only offers H.264 (the format AE can read) up to 1080p, so the panel only
-grabs H.264. Supporting 4K would mean re-encoding every download, which is slow and big.
+After Effects can't import VP9/AV1 video, which is what YouTube uses above 1080p. YouTube only
+offers H.264 (which After Effects reads natively) up to 1080p, so the panel only downloads H.264.
+4K would mean re-encoding every download.
 
 ## Troubleshooting
 
-- **"Failed: …"**: the message is yt-dlp's own error. Usually fixed by updating yt-dlp.
-  Full log is in your temp folder (`ytimport_*.log`).
+- **Downloads suddenly fail**: YouTube breaks yt-dlp every few weeks. Click **Update yt-dlp**
+  (winget/Homebrew installs: `winget upgrade yt-dlp.yt-dlp` / `brew upgrade yt-dlp`).
 - **"No H.264 version…"**: pick a lower quality.
-- **Age-restricted/private videos** need cookies; not supported in this version.
+- **Panel doesn't appear in Window → Extensions**: re-run the installer, then fully quit and reopen After Effects.
+- **Panel is blank or broken**: with After Effects open, visit `http://localhost:8099` in Chrome to see the panel's console errors.
+- Age-restricted/private videos aren't supported.
+
+## Files
+
+```
+extension/
+  CSXS/manifest.xml   extension definition (AE 2019+)
+  index.html, css/    panel UI
+  js/main.js          runs yt-dlp (Node.js), progress, clipboard
+  host/index.jsx      ExtendScript: import + place on timeline
+  .debug              enables the localhost:8099 inspector
+```
 
 Only download videos you have the rights to use (your own, licensed, or fair use).
